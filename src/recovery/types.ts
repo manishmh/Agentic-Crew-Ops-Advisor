@@ -18,6 +18,7 @@ import type {
   StationCode,
 } from "../domain/types.js";
 import type { AssignmentLegality } from "../rules/assignment.js";
+import type { RuleViolation } from "../rules/evidence.js";
 import type { CostBreakdown } from "./cost.js";
 
 export type Disruption =
@@ -95,7 +96,8 @@ export interface RecoveryPlan {
   /** Legal options, cheapest first. */
   ranked: RecoveryOption[];
   /** Illegal candidates with rule reasons. */
-  rejected: Array<{ crewId: CrewId; reasons: string[] }>;
+  /** Rejected candidates; violations are empty when eliminated before legality. */
+  rejected: Array<{ crewId: CrewId; reasons: string[]; violations: RuleViolation[]; legalityEvaluated: boolean }>;
   selected: RecoveryOption | undefined;
   totalCost: number;
 }

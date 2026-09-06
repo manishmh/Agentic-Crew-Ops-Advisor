@@ -93,6 +93,18 @@ describe("S4 — 90-minute delay with partial recovery", () => {
     expect(plan.suffixReleaseUtc).toBe("2026-09-16T14:15:00Z");
   });
 
+  it("allows an empty prefix when the first delayed leg is already illegal", () => {
+    const plan = planPartialDayRecovery(graph, "P-2203", "2026-09-16", 1000);
+    expect(plan.fullDayIllegal).toBe(true);
+    expect(plan.feasiblePrefixLegs).toBe(0);
+    expect(plan.suffixFlights).toEqual([
+      "DX401-2026-09-16",
+      "DX402-2026-09-16",
+      "DX403-2026-09-16",
+      "DX404-2026-09-16",
+    ]);
+  });
+
   it("produces suffix covers per vacated role with callout-only cost", () => {
     const plan = planPartialDayRecovery(graph, "P-2203", "2026-09-16", 90);
     expect(plan.suffixCovers.length).toBeGreaterThan(0);

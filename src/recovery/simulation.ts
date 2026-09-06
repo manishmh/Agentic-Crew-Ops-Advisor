@@ -145,7 +145,7 @@ export function splitPairingDay(
   const pairing = g.pairingById.get(pairingId);
   const day = pairing?.days.find((d) => d.date === date);
   if (!pairing || !day) throw new Error(`splitPairingDay: unknown day ${pairingId}|${date}`);
-  if (splitAfter < 0 || splitAfter >= day.flights.length - 1) {
+  if (splitAfter < -1 || splitAfter >= day.flights.length - 1) {
     throw new Error(`splitPairingDay: splitAfter ${splitAfter} out of range for ${day.flights.length} legs`);
   }
   const times = (fid: FlightId): { depUtc: IsoUtc; arrUtc: IsoUtc } => {
@@ -155,7 +155,10 @@ export function splitPairingDay(
   };
   const prefixFlights = day.flights.slice(0, splitAfter + 1);
   const suffixFlights = day.flights.slice(splitAfter + 1).map((fid) => ({ flightId: fid, ...times(fid) }));
-  const prefixReleaseUtc = addMinutes(times(prefixFlights[prefixFlights.length - 1]).arrUtc, 30);
+  // An empty prefix is a valid recovery boundary when even the first
+  // delayed sector cannot be operated legally by the original crew.
+  const prefixReleaseUtc =
+    prefixFlights.length === 0 ? day.reportUtc : addMinutes(times(prefixFlights[prefixFlights.length - 1]).arrUtc, 30);
   return {
     pairingId,
     date,

@@ -51,6 +51,12 @@ export interface SickCoverRequest {
   /** Additional exclusions beyond the sick crew (e.g. forced no-candidate tests). */
   extraExcludeCrewIds?: CrewId[];
   reportedUtc?: IsoUtc;
+  /**
+   * Disruption-driven uniform shift (minutes) applied to all pairing days
+   * on top of any deadhead shift: replacement reports/operates the shifted
+   * duty and the shift is priced as delay. Absent/zero = rostered timing.
+   */
+  delayMinutes?: number;
 }
 
 export function solveCrewCover(g: OperationalGraph, req: SickCoverRequest): CoverSolution {
@@ -68,16 +74,19 @@ export function solveCrewCover(g: OperationalGraph, req: SickCoverRequest): Cove
   });
 
   const options: RecoveryOption[] = [];
-  const rejected: Array<{ crewId: CrewId; reasons: string[] }> = eliminated.map((e) => ({
+  const rejected: CoverSolution["rejected"] = eliminated.map((e) => ({
     crewId: e.crewId,
     reasons: [e.reason],
+    violations: [],
+    legalityEvaluated: false,
   }));
 
+  const disruptionShiftMin = Math.round(req.delayMinutes ?? 0);
   for (const c of candidates) {
-    const delayMin = Math.round(c.deadhead.delayHours * 60);
+    const delayMin = Math.round(c.deadhead.delayHours * 60) + disruptionShiftMin;
     const timing: TimingOverlay | undefined =
       delayMin > 0 ? shiftPairingOverlay(g, req.pairingId, delayMin) : undefined;
-    // Reserve window is checked against the shifted (post-deadhead) report.
+    // Reserve window is checked against the shifted report.
     const shiftedReport =
       delayMin > 0
         ? addMinutes(g.pairingById.get(req.pairingId)?.days[0]?.reportUtc ?? "", delayMin)
@@ -87,11 +96,12 @@ export function solveCrewCover(g: OperationalGraph, req: SickCoverRequest): Cove
       requiredReportUtc: shiftedReport,
       timing,
     });
+    const coverDelayHours = Math.round((c.deadhead.delayHours + (req.delayMinutes ?? 0) / 60) * 100) / 100;
     const cost = priceCover(c.crew, c.kind, g.costs, {
       deadhead: c.deadhead.positioningFlightId !== undefined,
-      delayHours: c.deadhead.delayHours,
+      delayHours: coverDelayHours,
     });
-    const delayHours = c.deadhead.delayHours;
+    const delayHours = coverDelayHours;
     if (legality.legal) {
       options.push({
         crewId: c.crewId,
@@ -108,6 +118,8 @@ export function solveCrewCover(g: OperationalGraph, req: SickCoverRequest): Cove
       rejected.push({
         crewId: c.crewId,
         reasons: legality.violations.map((v) => v.message),
+        violations: legality.violations,
+        legalityEvaluated: true,
       });
     }
   }
@@ -132,6 +144,8 @@ export function solveCrewCover(g: OperationalGraph, req: SickCoverRequest): Cove
     rejected.push({
       crewId: o.crewId ?? "",
       reasons: (o.legality?.violations ?? []).map((v) => v.message),
+      violations: o.legality?.violations ?? [],
+      legalityEvaluated: true,
     });
   }
   rejected.sort((a, b) => (a.crewId < b.crewId ? -1 : 1));
@@ -302,7 +316,7 @@ export function planPartialDayRecovery(
     g,
     pairingId,
     date,
-    Math.max(0, feasiblePrefixLegs - 1),
+    feasiblePrefixLegs - 1,
     new Map(day.flights.map((fid) => [fid, shifted(fid)])),
   );
   const suffixSectors = split.suffixFlights.length;

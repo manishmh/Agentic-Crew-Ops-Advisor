@@ -38,7 +38,15 @@ export interface JointPlan {
 }
 
 export function allocateJoint(g: OperationalGraph, requests: JointCoverRequest[]): JointPlan {
-  const perDisruption = requests.map((r) => solveCrewCover(g, r));
+  // Every concurrently unavailable crew member is unavailable to every
+  // request, not only to their own vacated seat.
+  const unavailableCrewIds = requests.map((request) => request.sickCrewId);
+  const perDisruption = requests.map((r) =>
+    solveCrewCover(g, {
+      ...r,
+      extraExcludeCrewIds: unavailableCrewIds.filter((crewId) => crewId !== r.sickCrewId),
+    }),
+  );
   const pools = perDisruption.map((s) => s.ranked);
 
   let best: JointAssignment[] | undefined;
