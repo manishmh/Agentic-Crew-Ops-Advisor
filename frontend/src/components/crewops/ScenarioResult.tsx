@@ -22,7 +22,7 @@ export function ScenarioResult({
   onEvidence: (option: RecoveryOptionData, scenario: Scenario) => void;
 }) {
   return (
-    <div className="scenario-result">
+    <div className="scenario-result" data-testid={`scenario-result-${scenario.id}`}>
       <div className="analysis-trail">
         <span>
           <Check size={11} />
@@ -38,7 +38,7 @@ export function ScenarioResult({
           <Check size={11} />
           {scenario.id === "limits" ? "Evidence ready" : "Recovery assessed"}
         </span>
-        <Badge tone="muted">MOCK RESULT</Badge>
+        <Badge tone={scenario.live ? "success" : "muted"}>{scenario.live ? "LIVE DETERMINISTIC RESULT" : "MOCK RESULT"}</Badge>
       </div>
       <p className="analysis-summary">{scenario.summary}</p>
       <section className="panel impact-panel">
@@ -76,6 +76,26 @@ export function ScenarioResult({
           <div className="boundary-note">
             <Layers3 size={14} />
             {scenario.consequence.note}
+          </div>
+        </section>
+      )}
+      {scenario.certificationDuties && (
+        <section className="panel">
+          <PanelTitle title="Inspected certification duties">
+            <Badge tone="purple">DOMAIN DATES · UTC</Badge>
+          </PanelTitle>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>DUTY DATE</th><th>PAIRING</th><th>FLIGHTS</th><th>AIRCRAFT</th><th>CERTIFICATION</th></tr></thead>
+              <tbody>
+                {scenario.certificationDuties.map((duty) => (
+                  <tr key={`${duty.pairingId}-${duty.dutyDate}`}>
+                    <td className="mono">{duty.dutyDate}</td><td className="mono text-bright">{duty.pairingId}</td><td><FlightChips flights={duty.flightIds} /></td><td>{duty.aircraftTypes.join(", ")}</td>
+                    <td><Badge tone={duty.certificationLegal ? "legal" : "warning"}>{duty.certificationLegal ? "CERT VALID" : `CERT EXPIRED${duty.expired.length ? ` · ${duty.expired.join(", ")}` : ""}`}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
@@ -118,11 +138,14 @@ export function ScenarioResult({
           </div>
           <div className="closure-outcome">
             <div>
-              <span>Cancellation fallback · 2 flights</span>
-              <strong>{scenario.total}</strong>
+              <span>Cancellation fallback</span>
+              <strong>{scenario.closureOutcome?.fallbackCost ?? "Not required"}</strong>
             </div>
-            <Badge tone="warning">PARTIAL RECOVERY</Badge>
+            <Badge tone={scenario.closureOutcome?.recoveryRequired ? "warning" : "legal"}>
+              {scenario.closureOutcome?.recoveryRequired ? scenario.closureOutcome.recoveryAvailable === false ? "FALLBACK REQUIRED" : "RECOVERY REQUIRED" : "NO RECOVERY REQUIRED"}
+            </Badge>
           </div>
+          {scenario.closureOutcome?.consequence && <div className="boundary-note"><Layers3 size={14} />{scenario.closureOutcome.consequence}</div>}
         </section>
       )}
       {scenario.joint && (
@@ -140,13 +163,13 @@ export function ScenarioResult({
               <ArrowRight size={16} />
               <div>
                 <strong>{item.crew}</strong>
-                <small>{item.method}</small>
+                <small>{item.unavailableCrew ? `${item.unavailableCrew} unavailable · ` : ""}{item.method}</small>
               </div>
-              <Badge tone="legal">
-                <Check size={10} />
-                LEGAL
+              <Badge tone={item.status === "legal" ? "legal" : item.status === "rejected" ? "warning" : "muted"}>
+                {item.status === "legal" ? <Check size={10} /> : null}
+                {item.status === "legal" ? "LEGAL" : item.status === "rejected" ? "UNRESOLVED" : "CANCELLATION"}
               </Badge>
-              <strong className="mono">{item.cost}</strong>
+              <strong className="mono">{item.cost}{item.delay ? ` · ${item.delay}` : ""}</strong>
             </div>
           ))}
           <div className="joint-total">
@@ -191,6 +214,16 @@ export function ScenarioResult({
           <CircleAlert size={14} />
           <span>{scenario.note}</span>
         </div>
+      )}
+      {(scenario.id === "closure" || scenario.id === "certification" || scenario.id === "multi") && scenario.evidence && (
+        <button
+          type="button"
+          className="text-link"
+          data-testid="deterministic-evidence-button"
+          onClick={() => onEvidence({ id: scenario.id === "closure" ? "STATION_CLOSURE" : scenario.id === "certification" ? "CERT_EXPIRY" : "MULTI_SICK", name: `${scenario.label} assessment`, role: "Deterministic evidence", method: "Read-only analysis", status: "not-evaluated", cost: "—", delay: "—", positioning: "—", reason: "Deterministic timing, rule, recovery, and cost evidence.", checks: [], components: [] }, scenario)}
+        >
+          View deterministic evidence
+        </button>
       )}
       <div className="analysis-signoff">
         <ShieldCheck size={12} />

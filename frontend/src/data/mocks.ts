@@ -453,7 +453,7 @@ export const scenarios: Record<ScenarioId, Scenario> = {
   },
   certification: {
     id: "certification",
-    query: "Show certification risks",
+    query: "What happens if C-5417's recurrent training expires?",
     label: "Document / certification expiry",
     summary:
       "C-5417’s recurrent training is valid through 17 September. The next duty on 19 September is invalid for assignment and requires replacement.",
@@ -499,7 +499,7 @@ export const scenarios: Record<ScenarioId, Scenario> = {
   },
   multi: {
     id: "multi",
-    query: "Recover two simultaneous sick calls",
+    query: "C-3940 and C-1938 report sick on 2026-09-18",
     label: "Multi-crew disruption",
     summary:
       "A complete joint recovery plan covers both unavailable crew. Shared candidates are allocated globally to prevent conflicting assignments.",

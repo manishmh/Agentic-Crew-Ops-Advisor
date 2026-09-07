@@ -5,6 +5,7 @@
   "description": "dCortex Agentic Crew Ops Advisor — Step 1: canonical domain model, loader, in-memory operational graph",
   "type": "module",
   "scripts": {
+    "api": "tsc --declaration false && node dist/src/api/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -48,6 +48,13 @@ export interface OperationalImpact {
   label: string;
   value: string;
 }
+export interface ScenarioEvidence {
+  reason: string;
+  ruleId?: string;
+  passed?: boolean;
+  timestamps?: Record<string, string>;
+  details?: Record<string, string>;
+}
 export interface Scenario {
   id: ScenarioId;
   query: string;
@@ -60,16 +67,23 @@ export interface Scenario {
   recommended?: RecoveryOption;
   alternatives: RecoveryOption[];
   affectedFlights?: AffectedFlight[];
+  closureOutcome?: { fallbackCost?: string; recoveryRequired: boolean; recoveryAvailable?: boolean; consequence?: string };
+  evidence?: ScenarioEvidence[];
+  certificationDuties?: Array<{ pairingId: string; dutyDate: string; flightIds: string[]; aircraftTypes: string[]; certificationLegal: boolean; expired: string[] }>;
   consequence?: { title: string; checks: RuleCheck[]; note: string };
-  joint?: { pairing: string; crew: string; method: string; cost: string }[];
+  joint?: { pairing: string; crew: string; unavailableCrew?: string; method: string; cost: string; delay?: string; status?: OperationalStatus }[];
   total?: string;
   note?: string;
+  /** True when this display scenario was returned by the local deterministic API. */
+  live?: boolean;
 }
 export interface AssistantMessage {
   id: number;
   query: string;
   scenario?: Scenario;
   generic?: boolean;
+  state?: "loading" | "error" | "empty";
+  error?: string;
 }
 export interface TimelineFlight extends AffectedFlight {
   date: string;

@@ -1980,6 +1980,23 @@ td:first-child {
   color: #acbdd6;
   margin-bottom: 19px;
 }
+.api-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 17px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  min-height: 88px;
+}
+.api-state strong { display: block; font-size: 12px; margin-bottom: 5px; }
+.api-state p, .api-state small { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.55; }
+.api-state small { display: block; margin-top: 8px; }
+.api-state.error { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); }
+.api-state.error strong { color: var(--danger); }
+.api-spinner { width: 16px; height: 16px; margin-top: 2px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: api-spin .8s linear infinite; }
+@keyframes api-spin { to { transform: rotate(360deg); } }
 .scenario-result .panel-title {
   padding: 13px 14px;
 }

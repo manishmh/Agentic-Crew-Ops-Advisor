@@ -3,3 +3,5 @@ personal-note.txt
 problem_explanation*
 node_modules
 .env
+
+dist

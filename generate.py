@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Crew Ops Advisor - synthetic dataset generator (dCortex hackathon).
+Crew Ops Advisor - synthetic dataset generator (CrewOps hackathon).
 Deterministic: seed=42. All times UTC. Week: 2026-09-14 .. 2026-09-20.
 Snapshot (data cut): 2026-09-14T18:00:00Z. Hackathon day: 2026-09-15.
 """

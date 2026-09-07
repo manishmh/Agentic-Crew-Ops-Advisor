@@ -36,6 +36,11 @@ export function CrewOpsWorkspace({
   setActiveId,
   onEvidence,
   onNetwork,
+  onSickQuestion,
+  onDelayQuestion,
+  onStationClosureQuestion,
+  onCertificationQuestion,
+  onMultiSickQuestion,
 }: {
   messages: AssistantMessage[];
   onMessages: (messages: AssistantMessage[]) => void;
@@ -43,6 +48,11 @@ export function CrewOpsWorkspace({
   setActiveId: (id: number | undefined) => void;
   onEvidence: (option: RecoveryOption, scenario: Scenario) => void;
   onNetwork: () => void;
+  onSickQuestion: (question: string) => void;
+  onDelayQuestion: (question: string) => void;
+  onStationClosureQuestion: (question: string) => void;
+  onCertificationQuestion: (question: string) => void;
+  onMultiSickQuestion: (question: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const scroll = useRef<HTMLDivElement>(null);
@@ -54,6 +64,36 @@ export function CrewOpsWorkspace({
   const submit = (text: string, scenarioId?: ScenarioId) => {
     if (!text.trim()) return;
     const id = scenarioId ?? recognizeQuery(text);
+    if (id === "sick" || (/\bC-\d{4}\b/i.test(text) && /\b(?:sick|unavailable)\b/i.test(text) && (text.match(/\bC-\d{4}\b/gi)?.length ?? 0) === 1)) {
+      onSickQuestion(text.trim());
+      setQuery("");
+      scroll.current?.scrollTo({ top: 0 });
+      return;
+    }
+    if (id === "delay" || (/\b(?:delay|delayed)\s+DX\d+\s+(?:by\s+)?\d+\s*(?:minutes?|mins?|m)\b/i.test(text))) {
+      onDelayQuestion(text.trim());
+      setQuery("");
+      scroll.current?.scrollTo({ top: 0 });
+      return;
+    }
+    if (id === "closure" || /\b(?:close|closed|closure)\b/i.test(text) && /\b[A-Z]{3}\b/i.test(text) && /\b\d{1,2}:\d{2}\b/.test(text)) {
+      onStationClosureQuestion(text.trim());
+      setQuery("");
+      scroll.current?.scrollTo({ top: 0 });
+      return;
+    }
+    if (id === "certification" || /\bC-\d{4}\b/i.test(text) && /\b(?:certification|cert|expire[sd]?|expiry|training|legal\s+for\s+duty)\b/i.test(text)) {
+      onCertificationQuestion(text.trim());
+      setQuery("");
+      scroll.current?.scrollTo({ top: 0 });
+      return;
+    }
+    if (id === "multi" || /\b(?:simultaneous|two|three|multiple|recover)\b/i.test(text) && /\b(?:sick|unavailable)\b/i.test(text) && (text.match(/\bC-\d{4}\b/gi)?.length ?? 0) >= 2) {
+      onMultiSickQuestion(text.trim());
+      setQuery("");
+      scroll.current?.scrollTo({ top: 0 });
+      return;
+    }
     const message: AssistantMessage = {
       id: (messages.at(-1)?.id ?? 0) + 1,
       query: text.trim(),
@@ -230,9 +270,20 @@ export function CrewOpsWorkspace({
                 </div>
                 <strong>CrewOps Advisor</strong>
                 <Badge tone="blue">ANALYSIS</Badge>
-                <span className="muted">Demo response</span>
+                <span className="muted">{active.scenario?.live ? "Deterministic API" : "Demo response"}</span>
               </div>
-              {active.scenario ? (
+              {active.state === "loading" ? (
+                <div className="api-state" role="status">
+                  <span className="api-spinner" />
+                  <div><strong>Analyzing sick-crew impact</strong><p>Resolving pairings, deterministic legality and ranked recovery options.</p></div>
+                </div>
+              ) : active.state === "error" ? (
+                <div className="api-state error" role="alert">
+                  <div><strong>Analysis unavailable</strong><p>{active.error}</p><small>No mock result has been substituted. The displayed operation remains unchanged.</small></div>
+                </div>
+              ) : active.state === "empty" ? (
+                <div className="api-state"><div><strong>No affected duties returned</strong><p>The deterministic service completed without an operational result for this request.</p></div></div>
+              ) : active.scenario ? (
                 <ScenarioResult
                   scenario={active.scenario}
                   onEvidence={onEvidence}

@@ -25,7 +25,7 @@ export function TopBar({
       <button
         className="brand"
         onClick={() => go("Dashboard")}
-        aria-label="dCortex home"
+        aria-label="home"
       >
         <span className="brand-mark">
           <span />
@@ -33,7 +33,7 @@ export function TopBar({
           <span />
         </span>
         <span>
-          d<span className="brand-cortex">Cortex</span>
+          <span className="brand-cortex">CrewOps advisor</span>
           <sup>®</sup>
         </span>
       </button>

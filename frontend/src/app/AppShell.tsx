@@ -23,6 +23,7 @@ import type {
   Workspace,
 } from "../types/operations";
 import { operation, scenarios } from "../data/mocks";
+import { CrewOpsApiError, queryCertificationExpiry, queryDelay, queryMultiSick, querySickCrew, queryStationClosure } from "../api/crewops";
 import { Dashboard } from "../components/dashboard/Dashboard";
 import { Timeline } from "../components/timeline/Timeline";
 import { DayBrief } from "../components/daybrief/DayBrief";
@@ -63,18 +64,68 @@ export function AppShell() {
           : next,
     );
   };
-  const onScenario = (id: ScenarioId) => {
-    const scenario = scenarios[id];
-    const message = {
-      id: (messages.at(-1)?.id ?? 0) + 1,
-      query: scenario.query,
-      scenario,
-    };
-    setMessages([...messages, message]);
+  const addMessage = (message: AssistantMessage) => {
+    setMessages((current) => [...current, message]);
     setActiveId(message.id);
     go("CrewOps AI");
     setDate(operation.date);
     setDateLabel("Today");
+  };
+  const onSickQuestion = async (question: string) => {
+    await onLiveQuestion(question, querySickCrew);
+  };
+  const onDelayQuestion = async (question: string) => {
+    await onLiveQuestion(question, queryDelay);
+  };
+  const onStationClosureQuestion = async (question: string) => {
+    await onLiveQuestion(question, queryStationClosure);
+  };
+  const onCertificationQuestion = async (question: string) => {
+    await onLiveQuestion(question, queryCertificationExpiry);
+  };
+  const onMultiSickQuestion = async (question: string) => {
+    await onLiveQuestion(question, queryMultiSick);
+  };
+  const onLiveQuestion = async (question: string, queryApi: (question: string) => Promise<Scenario>) => {
+    const id = (messages.at(-1)?.id ?? 0) + 1;
+    addMessage({ id, query: question, state: "loading" });
+    try {
+      const scenario = await queryApi(question);
+      setMessages((current) => current.map((message) => message.id === id ? { ...message, scenario, state: undefined } : message));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "CrewOps analysis failed unexpectedly.";
+      const state = error instanceof CrewOpsApiError && error.kind === "empty" ? "empty" : "error";
+      setMessages((current) => current.map((item) => item.id === id ? { ...item, state, error: message } : item));
+    }
+  };
+  const onScenario = (id: ScenarioId) => {
+    const scenario = scenarios[id];
+    if (id === "sick") {
+      void onSickQuestion(scenario.query);
+      return;
+    }
+    if (id === "delay") {
+      void onDelayQuestion(scenario.query);
+      return;
+    }
+    if (id === "closure") {
+      void onStationClosureQuestion(scenario.query);
+      return;
+    }
+    if (id === "certification") {
+      void onCertificationQuestion(scenario.query);
+      return;
+    }
+    if (id === "multi") {
+      void onMultiSickQuestion(scenario.query);
+      return;
+    }
+    const message: AssistantMessage = {
+      id: (messages.at(-1)?.id ?? 0) + 1,
+      query: scenario.query,
+      scenario,
+    };
+    addMessage(message);
   };
   const onEvidence = (option: RecoveryOption, scenario: Scenario) =>
     setEvidence({ option, scenario });
@@ -267,6 +318,11 @@ export function AppShell() {
               setActiveId={setActiveId}
               onEvidence={onEvidence}
               onNetwork={() => setModal("network")}
+              onSickQuestion={onSickQuestion}
+            onDelayQuestion={onDelayQuestion}
+            onStationClosureQuestion={onStationClosureQuestion}
+            onCertificationQuestion={onCertificationQuestion}
+            onMultiSickQuestion={onMultiSickQuestion}
             />
           )}
         </div>
