@@ -1,6 +1,6 @@
 # Deployment: Railway API + Vercel frontend
 
-CrewOps Recovery Copilot deploys as two services. Browser requests go to the public Railway API; provider credentials remain only in Railway environment variables.
+CrewOps Recovery Copilot supports a Railway Node API with a Vercel frontend. Provider credentials remain only in Railway environment variables.
 
 ## Railway backend
 
@@ -70,3 +70,11 @@ npm run build --prefix frontend
 ```
 
 For local frontend development, leave `VITE_CREWOPS_API_BASE_URL` unset. Vite proxies `/api` and `/health` to `http://127.0.0.1:8080`.
+
+## Optional same-origin Vercel deployment
+
+The repository root also contains Vercel Node adapters at `api/crewops/query.ts` and `api/health.ts`. They delegate to the existing hardened Node HTTP boundary and include `data/**` in the function bundle through [vercel.json](../vercel.json).
+
+Use this option only when deploying the whole repository to Vercel with the repository root as Root Directory. The included configuration installs both the root and frontend dependencies, runs `npm run build:vercel`, publishes `frontend/dist`, and serves the API at the same origin. Leave `VITE_CREWOPS_API_BASE_URL` unset for that topology.
+
+The Railway + Vercel configuration above remains the recommended split deployment: it avoids serverless cold-start sensitivity for the operational graph and keeps the API service independently scalable.

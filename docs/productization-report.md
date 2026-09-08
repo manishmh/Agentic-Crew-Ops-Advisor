@@ -65,7 +65,7 @@ Verdict: **PORTFOLIO READY** — ready for a public deployment; no deployment or
 
 | Check | Result |
 |---|---|
-| Automated suite | 291 passed, 23 files; final Vitest completion observed |
+| Automated suite | 294 passed, 24 files; final Vitest completion observed |
 | New HTTP tests | 13 passing (health, IDs, isolation/reset, limits, chunked input, malformed payloads, CORS, safe logs/config, provider fallback) |
 | Typecheck | PASS |
 | Frontend production build | PASS |

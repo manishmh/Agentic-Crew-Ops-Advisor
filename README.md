@@ -66,4 +66,4 @@ python3 generate.py            # regenerates everything (seed-stable)
 
 ## Deployment
 
-The public product is deployed as a Railway Node API and a Vercel Vite frontend. See [deployment instructions](docs/deployment.md) for the required build/start commands, environment variables, CORS configuration, and health-check verification.
+The public product is deployed as a Railway Node API and a Vercel Vite frontend. See [deployment instructions](docs/deployment.md) for the required build/start commands, environment variables, CORS configuration, health-check verification, and the optional same-origin Vercel adapters.

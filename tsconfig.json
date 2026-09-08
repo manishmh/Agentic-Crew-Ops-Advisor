@@ -12,5 +12,5 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "tests/**/*", "evals/**/*"]
+  "include": ["src/**/*", "api/**/*", "tests/**/*", "evals/**/*"]
 }
