@@ -5,6 +5,7 @@ import { liveScenarios } from "../frontend/src/data/project.js";
 
 const workspaceSource = readFileSync(new URL("../frontend/src/components/crewops/CrewOpsWorkspace.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../frontend/src/app/AppShell.tsx", import.meta.url), "utf8");
+const scenarioResultSource = readFileSync(new URL("../frontend/src/components/crewops/ScenarioResult.tsx", import.meta.url), "utf8");
 
 describe("public guided-query interaction contract", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -83,5 +84,25 @@ describe("public guided-query interaction contract", () => {
   test("main product sources contain no public prototype-mode labels", () => {
     const visible = `${workspaceSource}\n${shellSource}`;
     expect(visible).not.toMatch(/DEMO MODE|READ-ONLY PREVIEW|DEMO SNAPSHOT|LOCAL DEMO MOCKS|DEMO OPERATOR/i);
+  });
+
+  test("CrewOps uses the compact workspace bar and removes the former tall desk header", () => {
+    expect(shellSource).toContain('workspace === "CrewOps AI"');
+    expect(shellSource).toContain('className="date-toolbar crewops-workspace-bar"');
+    expect(shellSource).toContain("LIVE OPERATIONS WORKSPACE");
+    expect(shellSource).toContain("Crew recovery desk");
+    expect(shellSource).toContain("Network view");
+    expect(workspaceSource).not.toContain('className="copilot-header"');
+    expect(workspaceSource).not.toContain('className="context-strip"');
+    expect(workspaceSource).not.toContain("Deterministic disruption analysis and recovery planning");
+    expect(workspaceSource).not.toContain("operation.flights");
+    expect(workspaceSource).not.toContain("operation.crew");
+    expect(workspaceSource).not.toContain("operation.reserves");
+  });
+
+  test("large recovery pools default to a concise candidate subset with explicit expansion", () => {
+    expect(scenarioResultSource).toContain('.filter((option) => option.status === "legal").slice(0, 5)');
+    expect(scenarioResultSource).toContain('.filter((option) => option.status !== "legal").slice(0, 3)');
+    expect(scenarioResultSource).toContain("View all ${scenario.alternatives.length} candidates");
   });
 });

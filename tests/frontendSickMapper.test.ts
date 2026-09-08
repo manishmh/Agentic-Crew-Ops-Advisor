@@ -1,4 +1,7 @@
 import { describe, expect, test } from "vitest";
+import { resolve } from "node:path";
+import { createCrewOpsQueryService } from "../src/api/crewopsQuery.js";
+import { loadOperationalGraph } from "../src/data/loader.js";
 import { CrewOpsApiError, mapCrewOpsResponse, mapCertificationExpiryResponse, mapDelayResponse, mapMultiSickResponse, mapSickCrewResponse, mapStationClosureResponse } from "../frontend/src/api/crewops.js";
 
 const response = {
@@ -59,6 +62,42 @@ describe("frontend DELAY API mapper", () => {
     expect(mapped).toMatchObject({ id: "delay", live: true, status: "RECOVERY REQUIRED", pairing: "P-2201" });
     expect(mapped.consequence?.checks[0]).toMatchObject({ id: "RULE-FDP-01", actual: "12.75", limit: "12.5" });
     expect(mapped.note).toContain("₹18,500");
+  });
+
+  test("presents the DX413 recovery as one costed plan with concise unique evidence", () => {
+    const graph = loadOperationalGraph(resolve(process.cwd(), "data")).graph;
+    const payload = createCrewOpsQueryService(graph).query({ question: "Delay DX413 by 75 minutes" });
+    if (!payload.success) throw new Error(payload.error.message);
+    const mapped = mapDelayResponse(payload, "DX413 is now expected to depart 75 minutes late.");
+    expect(mapped.recommended).toMatchObject({
+      id: "PARTIAL RECOVERY",
+      cost: "₹56,000",
+      costLabel: "Total plan cost",
+      delay: "0 min",
+      positioning: "No",
+      assignments: expect.arrayContaining([
+        expect.objectContaining({ id: "C-3310", role: "Captain", base: "BLR", cost: "₹18,500" }),
+        expect.objectContaining({ id: "C-3311", role: "First Officer", base: "BLR", cost: "₹18,500" }),
+      ]),
+    });
+    expect(mapped.recommended?.checks.map((check) => check.id)).toEqual([
+      "RULE-FDP-01", "RULE-DUTY-02", "RULE-FLT-03", "RULE-REST-04", "RULE-QUAL-05", "RULE-CERT-06", "RULE-BASE-07",
+    ]);
+    expect(new Set(mapped.recommended?.checks.map((check) => check.id)).size).toBe(mapped.recommended?.checks.length);
+    expect(mapped.recommended?.trace).toHaveLength(28);
+    expect(mapped.recommended?.trace).toContainEqual(expect.objectContaining({
+      ruleId: "RULE-BASE-07",
+      details: expect.objectContaining({ requiredReportLocation: "BLR", requiresPositioning: "false" }),
+    }));
+    expect(mapped.consequence?.note).toContain("Recovery coverage starts before DX588-2026-09-15");
+    expect(mapped.alternatives.find((option) => option.id === "C-2210")).toMatchObject({
+      cost: "₹25,000",
+      positioning: "Yes · DEL → BLR via DX402-2026-09-15",
+    });
+    expect(mapped.alternatives.flatMap((option) => option.checks).some((check) =>
+      check.id === "RULE-REST-04" && check.label.startsWith("DUTY OVERLAP") && check.actual === "DUTY OVERLAP",
+    )).toBe(true);
+    expect(mapped.evidence?.length).toBe(payload.evidence.length);
   });
 });
 

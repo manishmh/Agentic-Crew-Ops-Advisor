@@ -28,7 +28,8 @@ import type { RuleViolation } from "../rules/evidence.js";
 import type { TimingOverlay } from "../rules/overlay.js";
 import { propagateCrewImpact, stationClosureImpact } from "./impact.js";
 import { findCandidates, type CoverRequirement } from "./candidates.js";
-import { breakdown, cancellationComponent, priceCover } from "./cost.js";
+import { breakdown, cancellationComponent, priceCover, type CostBreakdown } from "./cost.js";
+import { planDeadhead } from "./deadhead.js";
 import { rankOptions } from "./ranking.js";
 import { mergeOverlays, shiftPairingOverlay, splitPairingDay } from "./simulation.js";
 import type { Disruption, RecoveryOption, RecoveryPlan, StationImpact } from "./types.js";
@@ -223,8 +224,18 @@ export interface SuffixCandidate {
   crewId: CrewId;
   kind: "reserve" | "dayoff";
   legality: AssignmentLegality;
+  cost: CostBreakdown;
   costTotal: number;
   delayHours: number;
+  requiredReportLocation: StationCode;
+  requiredReportUtc: IsoUtc;
+  positioning: {
+    required: boolean;
+    from: StationCode;
+    to: StationCode;
+    flightId?: FlightId;
+    arrivalUtc?: IsoUtc;
+  };
 }
 
 export interface PartialDayPlan {
@@ -236,6 +247,7 @@ export interface PartialDayPlan {
   prefixFdpHours: number;
   prefixFdpLimit: number;
   fullDayIllegal: boolean;
+  prefixFlights: FlightId[];
   suffixFlights: FlightId[];
   suffixReportUtc: IsoUtc;
   suffixReleaseUtc: IsoUtc;
@@ -326,26 +338,42 @@ export function planPartialDayRecovery(
       split.suffixFlights.reduce((t, s) => t + minutesBetween(s.depUtc, s.arrUtc) / 60, 0),
     ],
   ]);
-  const suffixDutyPerDate = new Map<DateStr, number>([
-    [date, minutesBetween(split.suffixReportUtc, split.suffixReleaseUtc) / 60],
-  ]);
-
   const suffixCovers: PartialDayPlan["suffixCovers"] = [];
   let suffixTotalCost = 0;
   const roles = [...new Set(pairing.crew.map((m) => m.role))];
+  const originalCrewIds = new Set(pairing.crew.map((member) => member.crewId));
+  const firstSuffixFlight = split.suffixFlights[0];
+  const requiredReportLocation = g.flightById.get(firstSuffixFlight.flightId)?.depStation;
+  if (!requiredReportLocation) throw new Error(`planPartialDayRecovery: no report station for ${firstSuffixFlight.flightId}`);
   const observedTypes = [...new Set(split.suffixFlights.map((s) => g.flightById.get(s.flightId)?.aircraftType).filter((t) => t !== undefined))];
   for (const role of roles) {
     const options: SuffixCandidate[] = [];
     for (const crew of g.crews) {
-      if (crew.rank !== role || crew.status !== "active") continue;
+      if (crew.rank !== role || crew.status !== "active" || originalCrewIds.has(crew.crewId)) continue;
       // Standalone suffix duty evaluated with Step-2 primitives (not the
-      // pairing-level check: the cover operates the suffix only).
-      // Suffix positioning is assumed pre-arranged (callout cost only, no
-      // deadhead leg) — consistent with the reference recovery costing.
+      // pairing-level check: the cover operates the suffix only). Cross-base
+      // candidates use the same data-driven positioning primitive as full
+      // re-crews; a recovery boundary never waives RULE-BASE-07.
+      const positioning = planDeadhead(
+        g,
+        crew.base,
+        requiredReportLocation,
+        date,
+        firstSuffixFlight.depUtc,
+      );
+      if (!positioning.reachable) continue;
+      const positioningDelayMinutes = Math.round(positioning.delayHours * 60);
+      const candidateReportUtc = positioningDelayMinutes > 0
+        ? positioning.newReportUtc ?? addMinutes(split.suffixReportUtc, positioningDelayMinutes)
+        : split.suffixReportUtc;
+      const candidateReleaseUtc = addMinutes(split.suffixReleaseUtc, positioningDelayMinutes);
+      const suffixDutyPerDate = new Map<DateStr, number>([
+        [date, minutesBetween(candidateReportUtc, candidateReleaseUtc) / 60],
+      ]);
       const isReserve = g.reserveByCrew.has(crew.crewId);
       const checks: AssignmentCheckEntry[] = [];
       const violations: RuleViolation[] = [];
-      const suffixFdp = checkFdp(split.suffixReportUtc, split.suffixReleaseUtc, suffixSectors);
+      const suffixFdp = checkFdp(candidateReportUtc, candidateReleaseUtc, suffixSectors);
       checks.push({ ruleId: FDP_RULE_ID, passed: suffixFdp.passed, evidence: suffixFdp.evidence });
       if (!suffixFdp.passed) violations.push(fdpViolation(date, suffixFdp.evidence));
       const history = g.dutyClockByCrew.get(crew.crewId)?.dailyHistory ?? [];
@@ -356,7 +384,7 @@ export function planPartialDayRecovery(
       const flightCheck = checkFlightHours({ history, existing: block, proposed: suffixBlockPerDate });
       checks.push({ ruleId: FLIGHT_RULE_ID, passed: flightCheck.passed, evidence: flightCheck.evidence });
       if (!flightCheck.passed) violations.push(flightHoursViolation(flightCheck.evidence));
-      const timeline = [...duties, { report: split.suffixReportUtc, release: split.suffixReleaseUtc }].sort((a, b) =>
+      const timeline = [...duties, { report: candidateReportUtc, release: candidateReleaseUtc }].sort((a, b) =>
         a.report < b.report ? -1 : 1,
       );
       let restPassed = true;
@@ -389,40 +417,56 @@ export function planPartialDayRecovery(
           details: { dutyDate: date, expired: cert.evidence.expired },
         });
       }
-      if (isReserve) {
-        const reserve = g.reserveByCrew.get(crew.crewId);
-        const windowOk =
-          reserve !== undefined &&
-          reserve.dates.includes(date) &&
-          isTimeInWindow(
-            split.suffixReportUtc.slice(11, 16),
-            reserve.oncallWindowUtc.start,
-            reserve.oncallWindowUtc.end,
-          );
-        checks.push({
+      const reserve = g.reserveByCrew.get(crew.crewId);
+      const windowOk = !isReserve || (
+        reserve !== undefined &&
+        reserve.dates.includes(date) &&
+        isTimeInWindow(
+          candidateReportUtc.slice(11, 16),
+          reserve.oncallWindowUtc.start,
+          reserve.oncallWindowUtc.end,
+        )
+      );
+      const requiresPositioning = crew.base !== requiredReportLocation;
+      checks.push({
+        ruleId: BASE_RULE_ID,
+        passed: windowOk,
+        evidence: {
           ruleId: BASE_RULE_ID,
-          passed: windowOk,
-          evidence: { ruleId: BASE_RULE_ID, suffixReportUtc: split.suffixReportUtc, windowOk },
-        });
-        if (!windowOk) {
-          violations.push({ ruleId: BASE_RULE_ID, message: `${BASE_RULE_ID} breached: suffix report outside reserve window` });
-        }
-      } else {
-        checks.push({
-          ruleId: BASE_RULE_ID,
-          passed: true,
-          evidence: { ruleId: BASE_RULE_ID, applicable: false, reason: "line assignment, not a reserve callout" },
-        });
+          candidateBase: crew.base,
+          requiredReportLocation,
+          requiredReportUtc: candidateReportUtc,
+          requiresPositioning,
+          positioningFlightId: positioning.positioningFlightId,
+          positioningArrivalUtc: positioning.positioningArrUtc,
+          reserveWindowOk: windowOk,
+        },
+      });
+      if (!windowOk) {
+        violations.push({ ruleId: BASE_RULE_ID, message: `${BASE_RULE_ID} breached: suffix report outside reserve window` });
       }
       if (violations.length > 0) continue;
       const kind = isReserve ? "reserve" : "dayoff";
-      const cost = priceCover(crew, kind, g.costs, {});
+      const cost = priceCover(crew, kind, g.costs, {
+        deadhead: requiresPositioning,
+        delayHours: positioning.delayHours,
+      });
       options.push({
         crewId: crew.crewId,
         kind,
         legality: { legal: true, crewId: crew.crewId, pairingId, asReserve: isReserve, violations, checks },
+        cost,
         costTotal: cost.total,
-        delayHours: 0,
+        delayHours: positioning.delayHours,
+        requiredReportLocation,
+        requiredReportUtc: candidateReportUtc,
+        positioning: {
+          required: requiresPositioning,
+          from: crew.base,
+          to: requiredReportLocation,
+          flightId: positioning.positioningFlightId,
+          arrivalUtc: positioning.positioningArrUtc,
+        },
       });
     }
     options.sort((a, b) => a.costTotal - b.costTotal || (a.crewId < b.crewId ? -1 : 1));
@@ -438,6 +482,7 @@ export function planPartialDayRecovery(
     prefixFdpHours,
     prefixFdpLimit: fullFdp.evidence.limitHours,
     fullDayIllegal: !fullFdp.passed,
+    prefixFlights: split.prefixFlights,
     suffixFlights: split.suffixFlights.map((s) => s.flightId),
     suffixReportUtc: split.suffixReportUtc,
     suffixReleaseUtc: split.suffixReleaseUtc,

@@ -36,9 +36,11 @@ const ruleLabel = (id: string) =>
   ({
     "RULE-FDP-01": "FDP compliant",
     "RULE-DUTY-02": "7-day duty compliant",
+    "RULE-FLT-03": "28-day flight hours compliant",
     "RULE-REST-04": "Rest compliant",
     "RULE-QUAL-05": "Aircraft qualified",
     "RULE-CERT-06": "Certifications valid",
+    "RULE-BASE-07": "Base / positioning rule satisfied",
   })[id] ?? id;
 
 function asArray(value: unknown, name: string): unknown[] {
@@ -62,6 +64,16 @@ function statusFrom(value: unknown): RecoveryOption["status"] {
   return value === true ? "legal" : value === false ? "rejected" : "not-evaluated";
 }
 
+function stringDetails(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value).flatMap(([key, item]) => {
+    if (item === undefined) return [];
+    if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [[key, String(item)] as [string, string]];
+    return [[key, JSON.stringify(item)] as [string, string]];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 function componentLabel(type: string): string {
   return {
     reserve_callout: "Reserve activation",
@@ -73,16 +85,48 @@ function componentLabel(type: string): string {
   }[type] ?? type;
 }
 
+function uniqueChecks(checks: RuleCheck[]): RuleCheck[] {
+  const byRule = new Map<string, RuleCheck>();
+  for (const check of checks) {
+    const current = byRule.get(check.id);
+    if (!current
+      || (current.status !== "rejected" && check.status === "rejected")
+      || (!current.label.startsWith("DUTY OVERLAP") && check.label.startsWith("DUTY OVERLAP"))) {
+      byRule.set(check.id, check);
+    }
+  }
+  return [...byRule.values()].slice(0, 7);
+}
+
+function nestedRuleValues(item: UnknownRecord): { actual?: string; limit?: string } {
+  const evidence = isRecord(item.evidence) ? item.evidence : item;
+  const worst = isRecord(evidence.worst) ? evidence.worst : undefined;
+  const actual = typeof item.actual === "number" ? item.actual
+    : typeof evidence.actualFdpHours === "number" ? evidence.actualFdpHours
+      : typeof worst?.totalHours === "number" ? worst.totalHours
+        : undefined;
+  const limit = typeof item.limit === "number" ? item.limit
+    : typeof evidence.limitHours === "number" ? evidence.limitHours
+      : typeof worst?.limitHours === "number" ? worst.limitHours
+        : undefined;
+  return {
+    actual: actual === undefined ? undefined : String(actual),
+    limit: limit === undefined ? undefined : String(limit),
+  };
+}
+
 function toChecks(evidence: unknown[], status: RecoveryOption["status"]): RuleCheck[] {
-  return evidence
+  return uniqueChecks(evidence
     .filter(isRecord)
     .filter((item) => typeof item.ruleId === "string")
-    .map((item) => ({
-      id: item.ruleId as string,
-      label: ruleLabel(item.ruleId as string),
-      status: item.passed === false ? "rejected" : status,
-      actual: typeof item.actual === "number" ? String(item.actual) : undefined,
-      limit: typeof item.limit === "number" ? String(item.limit) : undefined,
+    .map((item) => {
+      const values = nestedRuleValues(item);
+      return {
+        id: item.ruleId as string,
+        label: ruleLabel(item.ruleId as string),
+        status: item.passed === false ? "rejected" : status,
+        ...values,
+      };
     }));
 }
 
@@ -91,18 +135,21 @@ function mapOption(value: unknown, evidence: unknown[], rejected = false): Recov
   const cost = value.cost;
   const components = asArray(cost.components, "cost components").map((component) => {
     if (!isRecord(component)) throw new CrewOpsApiError("malformed", "Malformed cost component.");
-    return { label: componentLabel(asString(component.type, "component type")), value: rupees(asNumber(component.amount, "component amount")) };
+    const detail = typeof component.detail === "string" ? ` · ${component.detail}` : "";
+    return { label: `${componentLabel(asString(component.type, "component type"))}${detail}`, value: rupees(asNumber(component.amount, "component amount")) };
   });
   const status = rejected ? "rejected" : statusFrom(value.legal);
+  const explicitChecks = Array.isArray(value.checks) ? value.checks : [];
   const matchingEvidence = typeof value.crewId === "string"
     ? evidence.filter((item) => isRecord(item) && item.crewId === value.crewId)
     : evidence;
-  // Delay partial-cover primitives retain legality on the candidate but their
-  // tool evidence is operation-level. Show that deterministic operation
-  // evidence when candidate-scoped evidence is not available.
-  const optionEvidence = matchingEvidence.length > 0 ? matchingEvidence : evidence;
+  const optionEvidence = explicitChecks.length > 0 ? explicitChecks : matchingEvidence;
   const delay = asNumber(value.delayMinutes, "delayMinutes");
   const method = asString(value.method, "recovery method");
+  const positioning = isRecord(value.positioning) ? value.positioning : undefined;
+  const positioningLabel = positioning?.required === true
+    ? `Yes · ${String(positioning.from)} → ${String(positioning.to)}${typeof positioning.flightId === "string" ? ` via ${positioning.flightId}` : ""}`
+    : method === "positioning" ? "Yes" : "No";
   return {
     id: typeof value.crewId === "string" ? value.crewId : "CANCELLATION",
     name: typeof value.crewName === "string" ? value.crewName : "Cancellation fallback",
@@ -111,10 +158,16 @@ function mapOption(value: unknown, evidence: unknown[], rejected = false): Recov
     status,
     cost: rupees(asNumber(cost.total, "total cost")),
     delay: `${delay} min`,
-    positioning: method === "positioning" ? "Yes" : "No",
+    positioning: positioningLabel,
     reason: rejected ? "Candidate rejected by deterministic recovery screening." : "Deterministic recovery option ranked by the backend.",
     checks: toChecks(optionEvidence, status),
     components,
+    trace: explicitChecks.filter(isRecord).map((check) => ({
+      ruleId: typeof check.ruleId === "string" ? check.ruleId : undefined,
+      passed: typeof check.passed === "boolean" ? check.passed : undefined,
+      reason: `${typeof value.crewId === "string" ? `${value.crewId} · ` : ""}deterministic candidate check`,
+      details: stringDetails(check.evidence),
+    })),
   };
 }
 
@@ -123,12 +176,24 @@ function mapRejected(value: unknown): RecoveryOption {
   const violations = asArray(value.violations, "candidate violations");
   const reasons = asArray(value.reasons, "candidate reasons").filter((reason): reason is string => typeof reason === "string");
   const evaluated = value.legalityEvaluated === true;
-  const checks = violations.filter(isRecord).map((violation) => ({
-    id: asString(violation.ruleId, "violation rule"),
-    label: typeof violation.message === "string" ? violation.message : ruleLabel(asString(violation.ruleId, "violation rule")),
-    status: "rejected" as const,
-    actual: typeof violation.actual === "number" ? String(violation.actual) : undefined,
-    limit: typeof violation.limit === "number" ? String(violation.limit) : undefined,
+  const checks = uniqueChecks(violations.filter(isRecord).map((violation) => {
+    const ruleId = asString(violation.ruleId, "violation rule");
+    const actual = typeof violation.actual === "number" ? violation.actual : undefined;
+    const overlap = ruleId === "RULE-REST-04" && actual !== undefined && actual < 0;
+    const timestamps = typeof violation.message === "string"
+      ? violation.message.match(/from (\S+) to (\S+) is below/)
+      : undefined;
+    const overlapMinutes = overlap ? Math.round(Math.abs(actual) * 60) : 0;
+    const overlapDuration = overlap ? `${Math.floor(overlapMinutes / 60)}h ${String(overlapMinutes % 60).padStart(2, "0")}m` : "";
+    return {
+      id: ruleId,
+      label: overlap
+        ? `DUTY OVERLAP · next report occurs ${overlapDuration} before previous release${timestamps ? ` (${timestamps[1]} → ${timestamps[2]})` : ""}`
+        : typeof violation.message === "string" ? violation.message : ruleLabel(ruleId),
+      status: "rejected" as const,
+      actual: overlap ? "DUTY OVERLAP" : actual === undefined ? undefined : String(actual),
+      limit: typeof violation.limit === "number" ? String(violation.limit) : undefined,
+    };
   }));
   return {
     id: asString(value.crewId, "rejected crew"),
@@ -205,13 +270,67 @@ export function mapDelayResponse(payload: unknown, query: string): Scenario {
   const flights = asArray(pairing.flightIds, "affected flights").map((flight) => asString(flight, "flight ID"));
   const evidence = asArray(payload.evidence, "evidence");
   const recovery = payload.recovery;
-  const recommended = recovery.recommended === undefined ? undefined : mapOption(recovery.recommended, evidence);
   const alternatives = asArray(recovery.alternatives, "recovery alternatives").map((option) => mapOption(option, evidence));
   const rejected = asArray(recovery.rejected, "rejected candidates").map(mapRejected);
   const warnings = asArray(payload.warnings, "warnings").filter((warning): warning is string => typeof warning === "string");
   const assumptions = asArray(payload.assumptions, "assumptions").filter((item): item is string => typeof item === "string");
   const failedRule = evidence.filter(isRecord).find((item) => item.passed === false && typeof item.ruleId === "string");
   const plan = isRecord(recovery.recommendedPlan) ? recovery.recommendedPlan : undefined;
+  const boundary = isRecord(payload.consequences.boundary) ? payload.consequences.boundary : undefined;
+  const rawAssignments = plan && Array.isArray(plan.assignments) ? plan.assignments : [];
+  const mappedAssignments = rawAssignments.map((assignment) => mapOption(assignment, evidence));
+  const planComponents = plan && Array.isArray(plan.costComponents)
+    ? plan.costComponents.map((component) => {
+        if (!isRecord(component)) throw new CrewOpsApiError("malformed", "Malformed recommended plan cost component.");
+        const detail = typeof component.detail === "string" ? ` · ${component.detail}` : "";
+        return { label: `${componentLabel(asString(component.type, "component type"))}${detail}`, value: rupees(asNumber(component.amount, "component amount")) };
+      })
+    : [];
+  const prefixFlightIds = boundary && Array.isArray(boundary.prefixFlightIds)
+    ? boundary.prefixFlightIds.filter((item): item is string => typeof item === "string")
+    : [];
+  const recoveryFlightIds = boundary && Array.isArray(boundary.recoveryFlightIds)
+    ? boundary.recoveryFlightIds.filter((item): item is string => typeof item === "string")
+    : [];
+  const recommended = plan && mappedAssignments.length > 0
+    ? {
+        id: `${String(plan.strategy).toUpperCase()} RECOVERY`,
+        name: `${mappedAssignments.length}-role recovery plan`,
+        role: recoveryFlightIds.length > 0 ? `Coverage starts at ${recoveryFlightIds[0]}` : "Deterministic crew recovery",
+        method: `${String(plan.strategy)[0].toUpperCase()}${String(plan.strategy).slice(1)} crew recovery`,
+        status: "legal" as const,
+        cost: rupees(asNumber(plan.totalCost, "recommended plan cost")),
+        costLabel: "Total plan cost",
+        delay: `${asNumber(plan.delayMinutes, "recommended plan delay")} min`,
+        positioning: plan.positioningRequired === true ? "Yes" : "No",
+        reason: `${prefixFlightIds.length > 0 ? `Original crew retains ${prefixFlightIds.join(", ")}; ` : ""}${recoveryFlightIds.length > 0 ? `replacement coverage begins before ${recoveryFlightIds[0]}.` : "Deterministic recovery boundary applied."}`,
+        checks: uniqueChecks(mappedAssignments.flatMap((assignment) => assignment.checks)),
+        components: planComponents,
+        trace: mappedAssignments.flatMap((assignment) => assignment.trace ?? []),
+        assignments: rawAssignments.filter(isRecord).map((assignment, index) => ({
+          id: asString(assignment.crewId, "recommended crew ID"),
+          name: typeof assignment.crewName === "string" ? assignment.crewName : "Crew member",
+          role: asString(assignment.role, "recommended crew role"),
+          base: asString(assignment.base, "recommended crew base"),
+          method: mappedAssignments[index]?.method ?? asString(assignment.method, "recommended method"),
+          cost: mappedAssignments[index]?.cost ?? "—",
+          positioning: mappedAssignments[index]?.positioning ?? "—",
+        })),
+      }
+    : recovery.recommended === undefined ? undefined : mapOption(recovery.recommended, evidence);
+  const scenarioEvidence = evidence.filter(isRecord).map((item) => ({
+    reason: typeof item.reason === "string" ? item.reason : "Deterministic legality evidence.",
+    ruleId: typeof item.ruleId === "string" ? item.ruleId : undefined,
+    passed: typeof item.passed === "boolean" ? item.passed : undefined,
+    timestamps: isRecord(item.timestamps) ? Object.fromEntries(Object.entries(item.timestamps).filter((entry): entry is [string, string] => typeof entry[1] === "string")) : undefined,
+    details: {
+      ...(stringDetails(item.details) ?? {}),
+      ...(typeof item.actual === "number" ? { actual: String(item.actual) } : {}),
+      ...(typeof item.limit === "number" ? { limit: String(item.limit) } : {}),
+      ...(typeof item.crewId === "string" ? { crew: item.crewId } : {}),
+      ...(typeof item.flightId === "string" ? { flight: item.flightId } : {}),
+    },
+  }));
   return {
     ...agentDisplay(payload),
     id: "delay", query, label: "Flight delay", live: true,
@@ -229,10 +348,13 @@ export function mapDelayResponse(payload: unknown, query: string): Scenario {
     consequence: failedRule ? {
       title: "Legality consequence",
       checks: [{ id: failedRule.ruleId as string, label: ruleLabel(failedRule.ruleId as string), status: "rejected", actual: typeof failedRule.actual === "number" ? String(failedRule.actual) : undefined, limit: typeof failedRule.limit === "number" ? String(failedRule.limit) : undefined }],
-      note: isRecord(payload.consequences.boundary) ? `First recovery boundary · ${String(payload.consequences.boundary.pairingId)}, after ${String(payload.consequences.boundary.firstAffectedFlight ?? "the legal prefix")}.` : "Timing and legality evaluated through the deterministic delay overlay.",
+      note: boundary
+        ? `${prefixFlightIds.length > 0 ? `Original crew retains ${prefixFlightIds.join(", ")}. ` : ""}Recovery coverage starts before ${String(boundary.firstAffectedFlight ?? "the affected suffix")}.`
+        : "Timing and legality evaluated through the deterministic delay overlay.",
     } : undefined,
     recommended,
     alternatives: [...alternatives, ...rejected],
+    evidence: scenarioEvidence,
     note: [...warnings, ...assumptions, plan ? `Recommended ${String(plan.strategy)} recovery plan total: ${rupees(asNumber(plan.totalCost, "recommended plan cost"))}.` : ""].filter(Boolean).join(" ") || undefined,
   };
 }

@@ -42,6 +42,19 @@ export function EvidenceDrawer({
             ))}
           </div>
         </section>
+        {option.trace && option.trace.length > 0 && (
+          <section>
+            <h3 className="eyebrow">OPTION EVIDENCE TRACE</h3>
+            <div className="evidence-rules">
+              {option.trace.map((item, index) => (
+                <div className="boundary-note" key={`${item.ruleId ?? item.reason}-${index}`}>
+                  <FileCheck2 size={14} />
+                  <span>{item.ruleId ? `${item.ruleId} · ` : ""}{item.reason}{item.details ? ` · ${Object.entries(item.details).map(([key, value]) => `${key}: ${value}`).join(" / ")}` : ""}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         <section>
           <h3 className="eyebrow">
             COST CALCULATION <span>INR</span>

@@ -7,6 +7,7 @@ import {
   Plane,
   ShieldCheck,
 } from "lucide-react";
+import { useState } from "react";
 import type {
   RecoveryOption as RecoveryOptionData,
   Scenario,
@@ -22,6 +23,11 @@ export function ScenarioResult({
   scenario: Scenario;
   onEvidence: (option: RecoveryOptionData, scenario: Scenario) => void;
 }) {
+  const [showAllAlternatives, setShowAllAlternatives] = useState(false);
+  const legalAlternatives = scenario.alternatives.filter((option) => option.status === "legal").slice(0, 5);
+  const rejectedAlternatives = scenario.alternatives.filter((option) => option.status !== "legal").slice(0, 3);
+  const conciseAlternatives = [...legalAlternatives, ...rejectedAlternatives];
+  const displayedAlternatives = showAllAlternatives ? scenario.alternatives : conciseAlternatives;
   return (
     <div className="scenario-result" data-testid={`scenario-result-${scenario.id}`}>
       <div className="analysis-trail">
@@ -203,18 +209,28 @@ export function ScenarioResult({
         <section className="alternatives">
           <div className="spread">
             <h2>
-              Alternative Options{" "}
-              <span className="count-chip">{scenario.alternatives.length}</span>
+              Recovery candidates{" "}
+              <span className="count-chip">{displayedAlternatives.length} / {scenario.alternatives.length}</span>
             </h2>
-            <span className="muted">Ranked by deterministic cost</span>
+            <span className="muted">Top 5 ranked legal · 3 representative rejections</span>
           </div>
-          {scenario.alternatives.map((option, optionIndex) => (
+          {displayedAlternatives.map((option, optionIndex) => (
             <RecoveryOption
               key={`${option.id}-${optionIndex}`}
               option={option}
               onEvidence={(selected) => onEvidence(selected, scenario)}
             />
           ))}
+          {scenario.alternatives.length > conciseAlternatives.length && (
+            <button
+              type="button"
+              className="text-link alternatives-toggle"
+              onClick={() => setShowAllAlternatives((current) => !current)}
+            >
+              {showAllAlternatives ? "Show concise candidate list" : `View all ${scenario.alternatives.length} candidates`}
+              <ArrowRight size={13} />
+            </button>
+          )}
         </section>
       )}
       {scenario.note && (

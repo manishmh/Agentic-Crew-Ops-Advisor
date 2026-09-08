@@ -22,7 +22,6 @@ export function RecoveryOption({
     return (
       <details
         className={`alternative-option ${option.status}`}
-        open={option.status === "rejected"}
       >
         <summary>
           <span className="alternative-identity">
@@ -89,7 +88,7 @@ export function RecoveryOption({
         <div className="recovery-metrics">
           <div>
             <strong>{option.cost}</strong>
-            <span>Total cost</span>
+            <span>{option.costLabel ?? "Total cost"}</span>
           </div>
           <div>
             <strong>{option.delay}</strong>
@@ -101,6 +100,18 @@ export function RecoveryOption({
           </div>
         </div>
       </div>
+      {option.assignments && option.assignments.length > 0 && (
+        <div className="recovery-assignments" aria-label="Selected crew assignments">
+          {option.assignments.map((assignment) => (
+            <div key={`${assignment.role}-${assignment.id}`}>
+              <span>{assignment.role}</span>
+              <strong className="mono">{assignment.id}</strong>
+              <small>{assignment.name} · {assignment.base} · {assignment.method}</small>
+              <b className="mono">{assignment.cost}</b>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="recovery-checks">
         {option.checks.map((check, checkIndex) => (
           <LegalityCheck key={`${check.id}-${checkIndex}`} check={check} />

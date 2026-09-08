@@ -7,6 +7,7 @@ import type { OperationalGraph } from "../data/graph.js";
 import { analyzeSickCrew } from "../orchestration/sickCrew.js";
 import { analyzeDelay } from "../orchestration/delay.js";
 import { analyzeDisruption, type CertificationExpiryData, type MultiSickData, type StationClosureData } from "../orchestration/disruptions.js";
+import type { SuffixCandidate } from "../recovery/recovery.js";
 import type { RecoveryOption } from "../recovery/types.js";
 import type { EvidenceItem } from "../orchestration/types.js";
 
@@ -42,7 +43,14 @@ export interface CrewOpsQuerySuccess {
     alternatives: ApiRecoveryOption[];
     rejected: ApiRejectedCandidate[];
     cancellationFallbacks: ApiRecoveryOption[];
-    recommendedPlan?: { strategy: "partial" | "full" | "cancel"; totalCost: number };
+    recommendedPlan?: {
+      strategy: "partial" | "full" | "cancel";
+      totalCost: number;
+      assignments?: ApiRecoveryOption[];
+      delayMinutes?: number;
+      positioningRequired?: boolean;
+      costComponents?: Array<{ type: string; amount: number; detail?: string }>;
+    };
   };
   evidence: EvidenceItem[];
   warnings: string[];
@@ -65,6 +73,16 @@ export interface ApiRecoveryOption {
   cost: { currency: string; total: number; components: Array<{ type: string; amount: number; detail?: string }> };
   delayMinutes: number;
   affectedFlightIds: string[];
+  checks?: Array<{ ruleId: string; passed: boolean; evidence: unknown }>;
+  requiredReportLocation?: string;
+  requiredReportUtc?: string;
+  positioning?: {
+    required: boolean;
+    from: string;
+    to: string;
+    flightId?: string;
+    arrivalUtc?: string;
+  };
 }
 
 export interface ApiRejectedCandidate {
@@ -99,6 +117,7 @@ function adaptOption(graph: OperationalGraph, option: RecoveryOption): ApiRecove
     cost: option.cost,
     delayMinutes: Math.round(option.delayHours * 60),
     affectedFlightIds: option.affectedFlights,
+    checks: option.legality?.checks,
   };
 }
 
@@ -178,7 +197,7 @@ function extractMultiSick(graph: OperationalGraph, question: string, operational
 
 function delayOption(
   graph: OperationalGraph,
-  option: { crewId: string; kind: "reserve" | "dayoff"; costTotal: number; delayHours: number },
+  option: SuffixCandidate,
   pairingId: string,
   flightIds: string[],
 ): ApiRecoveryOption {
@@ -189,15 +208,17 @@ function delayOption(
     role: crew?.rank,
     base: crew?.base,
     kind: "cover",
-    method: option.kind,
+    method: option.positioning.required ? "positioning" : option.kind,
     pairingId,
     legal: true,
     legalityEvaluated: true,
-    // Partial-day candidates expose a deterministic total but no component
-    // breakdown. The adapter deliberately carries that exact primitive value.
-    cost: { currency: graph.costs.currency, total: option.costTotal, components: [] },
+    cost: option.cost,
     delayMinutes: Math.round(option.delayHours * 60),
     affectedFlightIds: flightIds,
+    checks: option.legality.checks,
+    requiredReportLocation: option.requiredReportLocation,
+    requiredReportUtc: option.requiredReportUtc,
+    positioning: option.positioning,
   };
 }
 
@@ -434,14 +455,25 @@ export function createCrewOpsQueryService(graph: OperationalGraph) {
       if (!result.success) {
         return { success: false, error: { code: "ANALYSIS_FAILED", message: result.summary } };
       }
-      const partialOptions = result.data.partial?.suffixCovers.flatMap((cover) =>
-        cover.options.map((option) => delayOption(graph, option, result.data.pairingId, result.data.partial?.suffixFlights ?? [])),
-      ) ?? [];
+      const partialOptionsByRole = result.data.partial?.suffixCovers.map((cover) => ({
+        role: cover.role,
+        options: cover.options.map((option) => delayOption(graph, option, result.data.pairingId, result.data.partial?.suffixFlights ?? [])),
+      })) ?? [];
+      const partialOptions = partialOptionsByRole.flatMap((cover) => cover.options);
       const fullSolutions = result.data.fullRecrew ?? [];
       const fullOptions = fullSolutions.flatMap((entry) => entry.solution.ranked.map((option) => adaptOption(graph, option)));
       const preferred = result.data.recommended?.strategy === "partial" ? partialOptions : fullOptions;
-      const recommended = preferred.find((option) => option.kind === "cover" && option.legal === true);
-      const alternatives = preferred.filter((option) => option.kind === "cover" && option !== recommended);
+      const selectedAssignments = result.data.recommended?.strategy === "partial"
+        ? partialOptionsByRole.flatMap((cover) => cover.options.slice(0, 1))
+        : result.data.recommended?.strategy === "full"
+          ? fullSolutions.flatMap((entry) => {
+              const selected = entry.solution.ranked.find((option) => option.kind === "cover" && option.legality?.legal === true);
+              return selected ? [adaptOption(graph, selected)] : [];
+            })
+          : [];
+      const selectedKeys = new Set(selectedAssignments.map((option) => `${option.crewId}|${option.role}`));
+      const recommended = selectedAssignments[0];
+      const alternatives = preferred.filter((option) => option.kind === "cover" && !selectedKeys.has(`${option.crewId}|${option.role}`));
       const rejected = fullSolutions.flatMap((entry) => entry.solution.rejected.map((candidate) => {
         const crew = graph.crewById.get(candidate.crewId);
         return { ...candidate, crewName: crew?.name, role: crew?.rank };
@@ -471,7 +503,13 @@ export function createCrewOpsQueryService(graph: OperationalGraph) {
           alternatives,
           rejected,
           cancellationFallbacks,
-          recommendedPlan: result.data.recommended,
+          recommendedPlan: result.data.recommended && {
+            ...result.data.recommended,
+            assignments: selectedAssignments,
+            delayMinutes: Math.max(0, ...selectedAssignments.map((option) => option.delayMinutes)),
+            positioningRequired: selectedAssignments.some((option) => option.positioning?.required === true || option.method === "positioning"),
+            costComponents: selectedAssignments.flatMap((option) => option.cost.components),
+          },
         },
         evidence: result.evidence,
         warnings: result.warnings,

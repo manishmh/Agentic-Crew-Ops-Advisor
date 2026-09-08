@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronRight, Clock3, Command, FileCheck2, GitBranch, History, MessageSquare, Plus, ShieldCheck, Sparkles } from "lucide-react";
-import { operation } from "../../data/mocks";
 import { liveScenarios, product } from "../../data/project";
 import type { AssistantMessage, RecoveryOption, Scenario } from "../../types/operations";
 import { Badge } from "../ui";
@@ -11,14 +10,13 @@ type Props = {
   activeId?: number;
   setActiveId: (id: number | undefined) => void;
   onEvidence: (option: RecoveryOption, scenario: Scenario) => void;
-  onNetwork: () => void;
   onRunQuery: (question: string) => Promise<boolean>;
   onNewBlank: () => void;
   submitting: boolean;
   focusToken: number;
 };
 
-export function CrewOpsWorkspace({ messages, activeId, setActiveId, onEvidence, onNetwork, onRunQuery, onNewBlank, submitting, focusToken }: Props) {
+export function CrewOpsWorkspace({ messages, activeId, setActiveId, onEvidence, onRunQuery, onNewBlank, submitting, focusToken }: Props) {
   const [query, setQuery] = useState("");
   const [newAnalysisOpen, setNewAnalysisOpen] = useState(false);
   const scroll = useRef<HTMLDivElement>(null);
@@ -71,8 +69,6 @@ export function CrewOpsWorkspace({ messages, activeId, setActiveId, onEvidence, 
         <div className="sidebar-trust"><ShieldCheck size={20} /><strong>Every decision. Explained.</strong><p>Traceable legality, exact costs and transparent recovery options.</p><div><span className="live-dot" /> Synthetic operational data</div></div>
       </aside>
       <main className="copilot-main">
-        <header className="copilot-header"><div><div className="eyebrow"><span className="live-dot" /> LIVE OPERATIONS WORKSPACE</div><h1>Crew recovery desk</h1><p>Deterministic disruption analysis and recovery planning</p></div><button className="text-link" onClick={onNetwork}><GitBranch size={14} /> Network view <ChevronRight size={14} /></button></header>
-        <div className="context-strip"><span><strong>{operation.flights}</strong> flights</span><span><strong>{operation.crew}</strong> crew</span><span><strong>{operation.reserves}</strong> reserves</span><span className="hub-marker">BLR hub</span><span className="snapshot-label">SYNTHETIC SNAPSHOT · 14 SEP 2026</span></div>
         <nav className="quick-scenarios" aria-label="Quick live scenarios">{liveScenarios.map(scenario => <button key={scenario.id} onClick={() => executeScenario(scenario)} disabled={submitting}>{scenario.label}</button>)}</nav>
         <div className="mobile-analysis-action">
           <button className="button" onClick={() => setNewAnalysisOpen(open => !open)} aria-expanded={newAnalysisOpen}><Plus size={13} /> New analysis</button>

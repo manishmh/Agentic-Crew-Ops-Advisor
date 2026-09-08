@@ -52,6 +52,8 @@ export interface DelayBoundary {
   pairingId: string;
   date: string;
   feasiblePrefixLegs: number;
+  prefixFlightIds: string[];
+  recoveryFlightIds: string[];
   firstAffectedFlight: string | undefined;
   fullDayFdpHours: number;
   fullDayFdpLimit: number;
@@ -167,6 +169,8 @@ export function analyzeDelay(g: OperationalGraph, req: DelayRequest): ToolResult
           pairingId: pairing.pairingId,
           date: day.date,
           feasiblePrefixLegs: partial.feasiblePrefixLegs,
+          prefixFlightIds: [...partial.prefixFlights],
+          recoveryFlightIds: [...partial.suffixFlights],
           firstAffectedFlight: suffix[0],
           fullDayFdpHours: crewAssessments[0]?.dutyHoursAfter ?? 0,
           fullDayFdpLimit: crewAssessments[0]?.fdpLimitHours ?? partial.prefixFdpLimit,

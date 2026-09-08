@@ -248,6 +248,37 @@ describe("Tier 3 safe fallback and grounded explanation", () => {
     ]) expect(explanationIsGrounded(badAnswer, deterministic)).toBe(false);
   });
 
+  test("grounding guard preserves delay-plan totals, selection, method, positioning, and recovery delay", () => {
+    const deterministic = tier2.query({ question: "Delay DX413 by 75 minutes" });
+    if (!deterministic.success) throw new Error(deterministic.error.message);
+    expect(explanationIsGrounded(
+      "C-3310 is selected at ₹18,500. Total plan cost is ₹56,000. Operational delay is 0 minutes. No positioning is required.",
+      deterministic,
+    )).toBe(true);
+    expect(explanationIsGrounded("The total plan cost is ₹18,500.", deterministic)).toBe(false);
+    expect(explanationIsGrounded("₹18,500 is the total recovery cost.", deterministic)).toBe(false);
+    expect(explanationIsGrounded("C-2210 is the selected recovery.", deterministic)).toBe(false);
+    expect(explanationIsGrounded("The recovery introduces 15 minutes of delay.", deterministic)).toBe(false);
+    expect(explanationIsGrounded("Positioning is required for the selected plan.", deterministic)).toBe(false);
+    const dayoff = deterministic.recovery.alternatives.find((option) => option.method === "dayoff" && option.crewId);
+    if (!dayoff?.crewId) throw new Error("expected a day-off alternative");
+    expect(explanationIsGrounded(`${dayoff.crewId} is a reserve alternative.`, deterministic)).toBe(false);
+
+    const positioned = structuredClone(deterministic);
+    const c2210 = positioned.recovery.alternatives.find((option) => option.crewId === "C-2210");
+    if (!c2210) throw new Error("expected positioned C-2210 alternative");
+    positioned.recovery.recommended = c2210;
+    positioned.recovery.recommendedPlan = {
+      strategy: "partial",
+      totalCost: c2210.cost.total,
+      assignments: [c2210],
+      delayMinutes: c2210.delayMinutes,
+      positioningRequired: true,
+      costComponents: c2210.cost.components,
+    };
+    expect(explanationIsGrounded("C-2210 is selected with no positioning required.", positioned)).toBe(false);
+  });
+
   test("grounded explanation is additive and cannot alter deterministic recovery", async () => {
     const deterministic = tier2.query({ question: "What happens if C-1042 reports sick?" });
     if (!deterministic.success) throw new Error(deterministic.error.message);

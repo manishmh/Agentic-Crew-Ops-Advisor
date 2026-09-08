@@ -103,6 +103,49 @@ describe("F/G. boundary and recovery options", () => {
     }
     expect(r.data.recommended?.strategy).toBe("partial");
   });
+
+  it("enforces the base and positioning rule at a partial recovery boundary", () => {
+    const r = analyzeDelay(graph, { flightId: "DX413-2026-09-15", delayMinutes: 75 });
+    const partial = r.data.partial;
+    expect(partial).toMatchObject({
+      prefixFlights: ["DX412-2026-09-15", "DX413-2026-09-15"],
+      suffixFlights: ["DX588-2026-09-15"],
+      suffixReportUtc: "2026-09-15T12:30:00Z",
+      suffixTotalCost: 56000,
+    });
+    const captain = partial?.suffixCovers.find((cover) => cover.role === "Captain");
+    expect(captain?.options[0]).toMatchObject({
+      crewId: "C-3310",
+      requiredReportLocation: "BLR",
+      positioning: { required: false, from: "BLR", to: "BLR" },
+      cost: { total: 18500, components: [{ type: "reserve_callout", amount: 18500 }] },
+    });
+    const crossBase = captain?.options.find((option) => option.crewId === "C-2210");
+    expect(crossBase).toMatchObject({
+      requiredReportLocation: "BLR",
+      requiredReportUtc: "2026-09-15T12:30:00Z",
+      positioning: {
+        required: true,
+        from: "DEL",
+        to: "BLR",
+        flightId: "DX402-2026-09-15",
+        arrivalUtc: "2026-09-15T08:45:00Z",
+      },
+      cost: {
+        total: 25000,
+        components: [
+          { type: "reserve_callout", amount: 18500 },
+          { type: "deadhead", amount: 6500 },
+        ],
+      },
+      delayHours: 0,
+    });
+    expect(crossBase?.legality.checks).toContainEqual(expect.objectContaining({
+      ruleId: "RULE-BASE-07",
+      passed: true,
+      evidence: expect.objectContaining({ requiresPositioning: true, positioningFlightId: "DX402-2026-09-15" }),
+    }));
+  });
 });
 
 describe("H. exact cost arithmetic", () => {

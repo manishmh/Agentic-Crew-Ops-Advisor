@@ -129,16 +129,26 @@ export function AppShell() {
           <nav aria-label="Workspaces">{tabs.map(tab => <button key={tab.name} onClick={() => go(tab.name)} className={workspace === tab.name ? "active" : ""}><tab.icon size={14} />{tab.name}{tab.name === "CrewOps AI" && <span className="new-tag">LIVE</span>}</button>)}</nav>
           <div className="workspace-context"><span className="live-dot" /> BLR OPERATIONS <span className="context-divider" /><Clock3 size={12} /> UTC</div>
         </div>
-        <div className="date-toolbar">
-          <div className="inline"><CalendarDays size={14} /><span className="selected-date">{date}</span></div>
-          <div className="date-note"><span>Operational week</span><strong>14 — 20 Sep 2026</strong><Badge tone="muted">SYNTHETIC SNAPSHOT</Badge></div>
-        </div>
+        {workspace === "CrewOps AI" ? (
+          <div className="date-toolbar crewops-workspace-bar">
+            <div className="crewops-workspace-title">
+              <span><i className="live-dot" /> LIVE OPERATIONS WORKSPACE</span>
+              <strong>Crew recovery desk</strong>
+            </div>
+            <button className="text-link" onClick={() => setModal("network")}><GitBranch size={14} /> Network view <ArrowRight size={13} /></button>
+          </div>
+        ) : (
+          <div className="date-toolbar">
+            <div className="inline"><CalendarDays size={14} /><span className="selected-date">{date}</span></div>
+            <div className="date-note"><span>Operational week</span><strong>14 — 20 Sep 2026</strong><Badge tone="muted">SYNTHETIC SNAPSHOT</Badge></div>
+          </div>
+        )}
         <div className="workspace-content">
           {date !== operation.date ? <div className="no-snapshot"><CalendarDays size={32} /><h1>No operational snapshot for {date}</h1><p>The portfolio dataset includes an operational snapshot for 14 September 2026.</p><button className="button primary" onClick={() => setDate(operation.date)}>Return to Sep 14 <ArrowRight size={14} /></button></div>
           : workspace === "Dashboard" ? <Dashboard key={railActive} crewOnly={railActive === "Crew"} onScenario={runScenario} onTimeline={() => go("Timeline")} onNetwork={() => setModal("network")} />
           : workspace === "Timeline" ? <Timeline onScenario={runScenario} onNetwork={() => setModal("network")} />
           : workspace === "Day Brief" ? <DayBrief onScenario={runScenario} />
-          : <CrewOpsWorkspace messages={messages} activeId={activeId} setActiveId={setActiveId} onEvidence={(option, scenario) => setEvidence({ option, scenario })} onNetwork={() => setModal("network")} onRunQuery={runQuery} onNewBlank={startBlankAnalysis} submitting={submitting} focusToken={focusToken} />}
+          : <CrewOpsWorkspace messages={messages} activeId={activeId} setActiveId={setActiveId} onEvidence={(option, scenario) => setEvidence({ option, scenario })} onRunQuery={runQuery} onNewBlank={startBlankAnalysis} submitting={submitting} focusToken={focusToken} />}
         </div>
         <footer className="status-bar"><span><span className="live-dot" /> Analysis service ready</span><span>{product.name.toUpperCase()} <i /> {operation.snapshot} <i /> SYNTHETIC OPERATIONAL DATASET</span></footer>
       </div>

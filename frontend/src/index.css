@@ -672,6 +672,39 @@ option {
   font-weight: 400;
   color: #a7b3c7;
 }
+.crewops-workspace-bar {
+  height: 45px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.crewops-workspace-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.crewops-workspace-title > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #82b6ab;
+  font-size: 7px;
+  letter-spacing: 1.1px;
+  white-space: nowrap;
+}
+.crewops-workspace-title > strong {
+  color: #d3dfef;
+  font-size: 15px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.crewops-workspace-bar > .text-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8ca0bd;
+  font-size: 9px;
+}
 .workspace-content {
   flex: 1;
   min-height: 0;
@@ -2241,6 +2274,32 @@ td:first-child {
   flex-wrap: wrap;
   gap: 8px 15px;
 }
+.recovery-assignments {
+  margin: 0 17px 14px;
+  border: 1px solid #263f56;
+  border-radius: 4px;
+  background: #0d1a2a;
+}
+.recovery-assignments > div {
+  display: grid;
+  grid-template-columns: minmax(115px, 0.8fr) minmax(75px, 0.55fr) minmax(190px, 1.8fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 11px;
+  border-bottom: 1px solid #20354a;
+  font-size: 9px;
+}
+.recovery-assignments > div:last-child {
+  border-bottom: 0;
+}
+.recovery-assignments span,
+.recovery-assignments small {
+  color: #7893ad;
+}
+.recovery-assignments b {
+  color: #bad5cf;
+  font-weight: 500;
+}
 .rule-check {
   display: flex;
   align-items: flex-start;
@@ -2399,6 +2458,10 @@ td:first-child {
 }
 .alternative-evidence {
   padding: 0 15px 12px;
+  font-size: 9px;
+}
+.alternatives-toggle {
+  margin-top: 5px;
   font-size: 9px;
 }
 .cost-breakdown > div {
@@ -3777,6 +3840,10 @@ td {
   .crewops-layout {
     grid-template-columns: 1fr;
   }
+  .recovery-assignments > div {
+    grid-template-columns: minmax(100px, 0.8fr) minmax(65px, 0.6fr) minmax(145px, 1.4fr) auto;
+    gap: 8px;
+  }
   .copilot-header {
     padding: 17px 19px;
   }
@@ -4170,6 +4237,10 @@ td {
   .project-engineering { gap: 22px; }
   .project-metrics > div { padding: 15px 10px; }
   .public-workspace-bar { padding: 8px 16px; }
+  .crewops-workspace-title { gap: 8px; }
+  .crewops-workspace-title > span { font-size: 6px; letter-spacing: 0.8px; }
+  .crewops-workspace-title > strong { font-size: 13px; }
+  .crewops-workspace-bar > .text-link { font-size: 8px; }
   .brand-cortex { font-size: 13px; }
 }
 @media (max-width: 540px) {
@@ -4177,4 +4248,8 @@ td {
   .project-engineering { grid-template-columns: 1fr; }
   .project-metrics { grid-template-columns: repeat(3, 1fr); }
   .architecture-flow .architecture-branches { grid-template-columns: 1fr; }
+  .crewops-workspace-title > span { max-width: 88px; white-space: normal; line-height: 1.25; }
+  .crewops-workspace-bar > .text-link { font-size: 0; gap: 2px; }
+  .recovery-assignments > div { grid-template-columns: 1fr auto; }
+  .recovery-assignments small { grid-column: 1 / -1; grid-row: 2; }
 }

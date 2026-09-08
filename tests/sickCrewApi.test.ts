@@ -56,6 +56,37 @@ describe("POST /api/crewops/query — DELAY", () => {
     expect(body.evidence.some((item) => item.ruleId === "RULE-FDP-01" && item.passed === false)).toBe(true);
     expect(Array.isArray(body.recovery.cancellationFallbacks)).toBe(true);
   });
+
+  test("exposes a complete partial plan without labeling one crew component as its total", () => {
+    const body = query({ question: "Delay DX413 by 75 minutes" });
+    if (!body.success) throw new Error(body.error.message);
+    expect(body.consequences.boundary).toMatchObject({
+      prefixFlightIds: ["DX412-2026-09-15", "DX413-2026-09-15"],
+      recoveryFlightIds: ["DX588-2026-09-15"],
+      firstAffectedFlight: "DX588-2026-09-15",
+    });
+    expect(body.recovery.recommended).toMatchObject({ crewId: "C-3310", base: "BLR", cost: { total: 18500 } });
+    expect(body.recovery.recommendedPlan).toMatchObject({
+      strategy: "partial",
+      totalCost: 56000,
+      delayMinutes: 0,
+      positioningRequired: false,
+      costComponents: [
+        { type: "reserve_callout", amount: 18500, detail: "Captain C-3310" },
+        { type: "reserve_callout", amount: 18500, detail: "First Officer C-3311" },
+        { type: "reserve_callout", amount: 9500, detail: "Senior Cabin Crew C-2111" },
+        { type: "reserve_callout", amount: 9500, detail: "Cabin Crew C-1329" },
+      ],
+    });
+    expect(body.recovery.recommendedPlan?.assignments?.map((option) => option.crewId)).toEqual([
+      "C-3310", "C-3311", "C-2111", "C-1329",
+    ]);
+    expect(body.recovery.alternatives.find((option) => option.crewId === "C-2210")).toMatchObject({
+      method: "positioning",
+      cost: { total: 25000, components: expect.arrayContaining([{ type: "deadhead", amount: 6500 }]) },
+      positioning: { required: true, from: "DEL", to: "BLR", flightId: "DX402-2026-09-15" },
+    });
+  });
 });
 
 describe("POST /api/crewops/query — STATION_CLOSURE", () => {

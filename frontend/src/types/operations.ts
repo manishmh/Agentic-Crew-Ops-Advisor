@@ -35,6 +35,17 @@ export interface RecoveryOption {
   checks: RuleCheck[];
   components: CostComponent[];
   comparison?: string;
+  costLabel?: string;
+  assignments?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    base: string;
+    method: string;
+    cost: string;
+    positioning: string;
+  }>;
+  trace?: ScenarioEvidence[];
 }
 export interface AffectedFlight {
   id: string;
