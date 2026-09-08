@@ -132,8 +132,8 @@ export function AppShell() {
         {workspace === "CrewOps AI" ? (
           <div className="date-toolbar crewops-workspace-bar">
             <div className="crewops-workspace-title">
-              <span><i className="live-dot" /> LIVE OPERATIONS WORKSPACE</span>
               <strong>Crew recovery desk</strong>
+              <span><i className="live-dot" /> LIVE OPERATIONS WORKSPACE</span>
             </div>
             <button className="text-link" onClick={() => setModal("network")}><GitBranch size={14} /> Network view <ArrowRight size={13} /></button>
           </div>
