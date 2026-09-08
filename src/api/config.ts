@@ -5,6 +5,10 @@ export interface ServerConfig {
   allowedOrigin?: string;
   trustProxy: boolean;
 }
+export interface ListenConfig {
+  port: number;
+  host: string;
+}
 export function positiveInteger(env: NodeJS.ProcessEnv, key: string, fallback: number, max = 1_000_000_000): number {
   if (!env[key]) return fallback;
   const value = Number(env[key]);
@@ -30,6 +34,14 @@ export function serverConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig
     rateWindowMs: positiveInteger(env, "CREWOPS_RATE_WINDOW_MS", 600_000),
     maxBodyBytes: positiveInteger(env, "CREWOPS_MAX_BODY_BYTES", 4096, 65536),
     allowedOrigin, trustProxy: env.CREWOPS_TRUST_PROXY === "true",
+  };
+}
+/** Railway and other Node hosts provide PORT; local development keeps CREWOPS_PORT. */
+export function listenConfig(env: NodeJS.ProcessEnv = process.env): ListenConfig {
+  const usesPlatformPort = Boolean(env.PORT);
+  return {
+    port: positiveInteger(env, usesPlatformPort ? "PORT" : "CREWOPS_PORT", 8080, 65535),
+    host: env.CREWOPS_HOST || (usesPlatformPort ? "0.0.0.0" : "127.0.0.1"),
   };
 }
 /** Per-server fixed window; bounded cardinality prevents unbounded IP storage. */

@@ -4,13 +4,18 @@
   "private": true,
   "description": "CrewOps Recovery Copilot — deterministic airline crew disruption analysis with an optional LLM planner",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
-    "api": "tsc --declaration false && node dist/src/api/server.js",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file-if-exists=.env dist/src/api/server.js",
+    "api": "npm run build && npm run start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:agent": "tsc --declaration false && node dist/evals/runAgentEval.js",
-    "eval:agent:live": "tsc --declaration false && node dist/evals/runAgentEval.js --live"
+    "eval:agent": "tsc --declaration false && node --env-file-if-exists=.env dist/evals/runAgentEval.js",
+    "eval:agent:live": "tsc --declaration false && node --env-file-if-exists=.env dist/evals/runAgentEval.js --live"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",

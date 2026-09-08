@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { request as httpRequest, type Server } from "node:http";
 import { createCrewOpsServer, type RequestLog } from "../src/api/server.js";
-import { serverConfig } from "../src/api/config.js";
+import { listenConfig, serverConfig } from "../src/api/config.js";
 import type { LlmProvider } from "../src/agent/provider.js";
 
 const servers: Server[] = [];
@@ -15,6 +15,11 @@ const post = (url: string, body = JSON.stringify({ question: "C-1042 reports sic
 afterEach(async () => { await Promise.all(servers.splice(0).map(server => new Promise<void>(resolve => { server.closeAllConnections(); server.close(() => resolve()); }))); });
 
 describe("Public HTTP boundary", () => {
+  test("uses Railway's PORT and a public bind address without changing local defaults", () => {
+    expect(listenConfig({})).toEqual({ port: 8080, host: "127.0.0.1" });
+    expect(listenConfig({ PORT: "5432" })).toEqual({ port: 5432, host: "0.0.0.0" });
+    expect(listenConfig({ PORT: "5432", CREWOPS_PORT: "8080", CREWOPS_HOST: "127.0.0.1" })).toEqual({ port: 5432, host: "127.0.0.1" });
+  });
   test("cheap health and request IDs expose only safe fields", async () => {
     const logs: RequestLog[] = []; const url = await start({ log: entry => logs.push(entry) });
     const response = await fetch(url + "/health");

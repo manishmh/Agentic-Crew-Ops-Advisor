@@ -2,6 +2,13 @@ import type { RecoveryOption, RuleCheck, Scenario } from "../types/operations.js
 
 type UnknownRecord = Record<string, unknown>;
 const isRecord = (value: unknown): value is UnknownRecord => typeof value === "object" && value !== null;
+const frontendEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+const apiBaseUrl = (frontendEnv?.VITE_CREWOPS_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
+
+/** Empty locally (Vite proxy); absolute on Vercel so requests reach Railway. */
+export function crewOpsApiUrl(path: string): string {
+  return `${apiBaseUrl}${path}`;
+}
 
 function agentDisplay(payload: UnknownRecord): Pick<Scenario, "naturalLanguageAnswer" | "agent"> {
   const answer = typeof payload.naturalLanguageAnswer === "string" ? payload.naturalLanguageAnswer : undefined;
@@ -427,7 +434,7 @@ export async function queryAgent(question: string, signal?: AbortSignal): Promis
 async function queryLive(question: string, mapper: (payload: unknown, question: string) => Scenario, signal?: AbortSignal): Promise<Scenario> {
   let response: Response;
   try {
-    response = await fetch("/api/crewops/query", {
+    response = await fetch(crewOpsApiUrl("/api/crewops/query"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ question }),

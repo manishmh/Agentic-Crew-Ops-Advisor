@@ -7,7 +7,7 @@ import { loadOperationalGraph } from "../data/loader.js";
 import { createCrewOpsQueryService } from "./crewopsQuery.js";
 import { createAgentCrewOpsQueryService } from "../agent/service.js";
 import { createLlmProviderFromEnv, type LlmProvider } from "../agent/provider.js";
-import { createRateLimiter, positiveInteger, serverConfig, type ServerConfig } from "./config.js";
+import { createRateLimiter, listenConfig, serverConfig, type ServerConfig } from "./config.js";
 
 function json(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
@@ -83,8 +83,7 @@ export function createCrewOpsServer(dataDir = resolve(process.cwd(), "data"), pr
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const port = positiveInteger(process.env, "CREWOPS_PORT", 8080, 65535);
-    const host = process.env.CREWOPS_HOST || "127.0.0.1";
+    const { port, host } = listenConfig();
     createCrewOpsServer(process.env.CREWOPS_DATA_DIR ?? resolve(process.cwd(), "data")).listen(port, host, () => console.info(JSON.stringify({ event: "listening", service: "crewops-recovery-copilot", port })));
   } catch (error) {
     console.error(error instanceof Error && error.message.startsWith("Invalid configuration:") ? error.message : "Startup failed. Check server configuration and dataset availability.");

@@ -1,4 +1,4 @@
-# Crew Ops Advisor — Synthetic Dataset
+# CrewOps Recovery Copilot — Synthetic Dataset
 
 Master dataset for the CrewOps hackathon problem statement. Deterministic
 (seed 42), regenerable with `generate.py`, independently checked by `validate.py`.
@@ -63,3 +63,7 @@ a Captain**. Change "FO C-2087" → "Captain C-2087" in the doc.
 python3 validate.py            # checks data/ (PASS/FAIL with details)
 python3 generate.py            # regenerates everything (seed-stable)
 ```
+
+## Deployment
+
+The public product is deployed as a Railway Node API and a Vercel Vite frontend. See [deployment instructions](docs/deployment.md) for the required build/start commands, environment variables, CORS configuration, and health-check verification.
