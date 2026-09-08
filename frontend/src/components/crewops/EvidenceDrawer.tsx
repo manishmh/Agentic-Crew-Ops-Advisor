@@ -27,6 +27,12 @@ export function EvidenceDrawer({
           </div>
           <Badge tone="legal">{scenario.live ? "VERIFIED" : "VERIFIED DEMO"}</Badge>
         </div>
+        {scenario.agent && (
+          <section>
+            <h3 className="eyebrow">AGENT TRACE</h3>
+            <p className="evidence-reason">Query interpretation → {scenario.id.toUpperCase()} · Analysis → deterministic CrewOps engine · Explanation → {scenario.agent.explainerUsed ? "AI grounded in deterministic evidence" : "deterministic summary"}</p>
+          </section>
+        )}
         <section>
           <h3 className="eyebrow">WHY THIS OPTION</h3>
           <p className="evidence-reason">{option.reason}</p>

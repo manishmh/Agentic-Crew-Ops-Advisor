@@ -3,6 +3,15 @@ import type { RecoveryOption, RuleCheck, Scenario } from "../types/operations.js
 type UnknownRecord = Record<string, unknown>;
 const isRecord = (value: unknown): value is UnknownRecord => typeof value === "object" && value !== null;
 
+function agentDisplay(payload: UnknownRecord): Pick<Scenario, "naturalLanguageAnswer" | "agent"> {
+  const answer = typeof payload.naturalLanguageAnswer === "string" ? payload.naturalLanguageAnswer : undefined;
+  if (payload.agent === undefined) return { naturalLanguageAnswer: answer };
+  if (!isRecord(payload.agent)) throw new CrewOpsApiError("malformed", "Malformed CrewOps agent metadata.");
+  const agent = payload.agent;
+  for (const key of ["plannerUsed", "plannerFallback", "explainerUsed", "fallbackUsed"] as const) if (typeof agent[key] !== "boolean") throw new CrewOpsApiError("malformed", `Malformed CrewOps agent metadata: ${key}.`);
+  return { naturalLanguageAnswer: answer, agent: { plannerUsed: agent.plannerUsed as boolean, plannerFallback: agent.plannerFallback as boolean, explainerUsed: agent.explainerUsed as boolean, fallbackUsed: agent.fallbackUsed as boolean } };
+}
+
 export class CrewOpsApiError extends Error {
   readonly kind: "network" | "backend" | "malformed" | "empty";
   constructor(
@@ -153,6 +162,7 @@ export function mapSickCrewResponse(payload: unknown, query: string): Scenario {
   const warnings = asArray(payload.warnings, "warnings").filter((warning): warning is string => typeof warning === "string");
   const assumptions = asArray(payload.assumptions, "assumptions").filter((assumption): assumption is string => typeof assumption === "string");
   return {
+    ...agentDisplay(payload),
     id: "sick",
     query,
     label: "Sick crew",
@@ -196,6 +206,7 @@ export function mapDelayResponse(payload: unknown, query: string): Scenario {
   const failedRule = evidence.filter(isRecord).find((item) => item.passed === false && typeof item.ruleId === "string");
   const plan = isRecord(recovery.recommendedPlan) ? recovery.recommendedPlan : undefined;
   return {
+    ...agentDisplay(payload),
     id: "delay", query, label: "Flight delay", live: true,
     summary: asString(payload.summary, "summary"),
     status: payload.consequences.recoveryRequired === true ? "RECOVERY REQUIRED" : "ABSORBED · LEGAL",
@@ -255,6 +266,7 @@ export function mapStationClosureResponse(payload: unknown, query: string): Scen
   const operationalConsequences = asArray(consequences.operationalConsequences, "operational consequences");
   const consequence = operationalConsequences.find(isRecord);
   return {
+    ...agentDisplay(payload),
     id: "closure", query, label: "Station closure", live: true,
     summary: asString(payload.summary, "summary"),
     status: consequences.recoveryRequired === true ? "RECOVERY REQUIRED" : "MODELED DELAY · LEGAL",
@@ -315,6 +327,7 @@ export function mapCertificationExpiryResponse(payload: unknown, query: string):
   const warnings = asArray(payload.warnings, "warnings").filter((item): item is string => typeof item === "string");
   const assumptions = asArray(payload.assumptions, "assumptions").filter((item): item is string => typeof item === "string");
   return {
+    ...agentDisplay(payload),
     id: "certification", query, label: "Certification expiry", live: true,
     summary: asString(payload.summary, "summary"),
     status: consequences.recoveryRequired === true ? "INVALID FOR DUTY" : "NO AFFECTED DUTY",
@@ -365,7 +378,22 @@ export function mapMultiSickResponse(payload: unknown, query: string): Scenario 
   const assumptions = asArray(payload.assumptions, "assumptions").filter((item): item is string => typeof item === "string");
   const totalEvidence = evidence.filter(isRecord).find((item) => isRecord(item.cost) && typeof item.reason === "string" && item.reason.startsWith("joint total"));
   const total = isRecord(totalEvidence) && isRecord(totalEvidence.cost) ? rupees(asNumber(totalEvidence.cost.total, "joint total")) : undefined;
-  return { id: "multi", query, label: "Multi-crew disruption", live: true, summary: asString(payload.summary, "summary"), status: payload.consequences.complete === true ? "COMPLETE PLAN" : "INCOMPLETE / UNRESOLVED", pairing: disruptions.map((item) => item.pairing).join(" / "), metrics: [{ label: "Unavailable crew", value: String(unavailable.length) }, { label: "Affected pairings", value: String(asArray(payload.consequences.affectedPairings, "affected pairings").length) }, { label: "Affected flights", value: String(affectedFlights.length) }, { label: "Plan status", value: payload.consequences.complete === true ? "Complete" : "Incomplete" }], flights: affectedFlights, alternatives: [], joint: disruptions, total, evidence: evidence.filter(isRecord).map((item) => ({ reason: typeof item.reason === "string" ? item.reason : "Deterministic joint recovery evidence.", ruleId: typeof item.ruleId === "string" ? item.ruleId : undefined, passed: typeof item.passed === "boolean" ? item.passed : undefined })), note: [...warnings, ...assumptions].join(" ") || undefined };
+  return { ...agentDisplay(payload), id: "multi", query, label: "Multi-crew disruption", live: true, summary: asString(payload.summary, "summary"), status: payload.consequences.complete === true ? "COMPLETE PLAN" : "INCOMPLETE / UNRESOLVED", pairing: disruptions.map((item) => item.pairing).join(" / "), metrics: [{ label: "Unavailable crew", value: String(unavailable.length) }, { label: "Affected pairings", value: String(asArray(payload.consequences.affectedPairings, "affected pairings").length) }, { label: "Affected flights", value: String(affectedFlights.length) }, { label: "Plan status", value: payload.consequences.complete === true ? "Complete" : "Incomplete" }], flights: affectedFlights, alternatives: [], joint: disruptions, total, evidence: evidence.filter(isRecord).map((item) => ({ reason: typeof item.reason === "string" ? item.reason : "Deterministic joint recovery evidence.", ruleId: typeof item.ruleId === "string" ? item.ruleId : undefined, passed: typeof item.passed === "boolean" ? item.passed : undefined })), note: [...warnings, ...assumptions].join(" ") || undefined };
+}
+
+export function mapCrewOpsResponse(payload: unknown, query: string): Scenario {
+  if (!isRecord(payload) || !isRecord(payload.intent)) {
+    if (isRecord(payload) && payload.success === false) throw new CrewOpsApiError("backend", isRecord(payload.error) ? errorMessage(payload.error.message) : "CrewOps could not analyze this request.");
+    throw new CrewOpsApiError("malformed", "CrewOps returned an unsupported agent response shape.");
+  }
+  switch (payload.intent.type) {
+    case "SICK_CREW": return mapSickCrewResponse(payload, query);
+    case "DELAY": return mapDelayResponse(payload, query);
+    case "STATION_CLOSURE": return mapStationClosureResponse(payload, query);
+    case "CERT_EXPIRY": return mapCertificationExpiryResponse(payload, query);
+    case "MULTI_SICK": return mapMultiSickResponse(payload, query);
+    default: throw new CrewOpsApiError("malformed", "CrewOps returned an unsupported agent intent.");
+  }
 }
 
 function errorMessage(value: unknown): string {
@@ -390,6 +418,10 @@ export async function queryCertificationExpiry(question: string, signal?: AbortS
 
 export async function queryMultiSick(question: string, signal?: AbortSignal): Promise<Scenario> {
   return queryLive(question, mapMultiSickResponse, signal);
+}
+
+export async function queryAgent(question: string, signal?: AbortSignal): Promise<Scenario> {
+  return queryLive(question, mapCrewOpsResponse, signal);
 }
 
 async function queryLive(question: string, mapper: (payload: unknown, question: string) => Scenario, signal?: AbortSignal): Promise<Scenario> {

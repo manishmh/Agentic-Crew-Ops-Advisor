@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { CrewOpsApiError, mapCertificationExpiryResponse, mapDelayResponse, mapMultiSickResponse, mapSickCrewResponse, mapStationClosureResponse } from "../frontend/src/api/crewops.js";
+import { CrewOpsApiError, mapCrewOpsResponse, mapCertificationExpiryResponse, mapDelayResponse, mapMultiSickResponse, mapSickCrewResponse, mapStationClosureResponse } from "../frontend/src/api/crewops.js";
 
 const response = {
   success: true,
@@ -29,6 +29,20 @@ describe("frontend SICK_CREW API mapper", () => {
   test("rejects malformed and empty API payloads instead of showing a mock", () => {
     expect(() => mapSickCrewResponse({ success: true }, "x")).toThrow(CrewOpsApiError);
     expect(() => mapSickCrewResponse({ ...response, consequences: { recoveryRequired: false, affectedPairings: [] } }, "x")).toThrow(/No affected duties/);
+  });
+
+  test("maps the additive grounded answer and agent status without replacing structured data", () => {
+    const mapped = mapCrewOpsResponse({
+      ...response,
+      naturalLanguageAnswer: "C-1042 affects P-2291; C-3310 is the deterministic recommendation.",
+      agent: { plannerUsed: true, plannerFallback: false, explainerUsed: true, fallbackUsed: false, plannerMs: 12, toolMs: 2, explainerMs: 18 },
+    }, "Captain C-1042 called in sick");
+    expect(mapped).toMatchObject({ id: "sick", naturalLanguageAnswer: expect.stringContaining("C-3310"), agent: { plannerUsed: true, plannerFallback: false, explainerUsed: true, fallbackUsed: false } });
+    expect(mapped.recommended).toMatchObject({ id: "C-3310", cost: "₹18,500" });
+  });
+
+  test("rejects malformed agent metadata explicitly", () => {
+    expect(() => mapCrewOpsResponse({ ...response, agent: { plannerUsed: "yes" } }, "x")).toThrow(/Malformed CrewOps agent metadata/);
   });
 });
 

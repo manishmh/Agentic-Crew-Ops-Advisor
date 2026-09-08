@@ -41,6 +41,7 @@ export function CrewOpsWorkspace({
   onStationClosureQuestion,
   onCertificationQuestion,
   onMultiSickQuestion,
+  onAgentQuestion,
 }: {
   messages: AssistantMessage[];
   onMessages: (messages: AssistantMessage[]) => void;
@@ -53,6 +54,7 @@ export function CrewOpsWorkspace({
   onStationClosureQuestion: (question: string) => void;
   onCertificationQuestion: (question: string) => void;
   onMultiSickQuestion: (question: string) => void;
+  onAgentQuestion: (question: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const scroll = useRef<HTMLDivElement>(null);
@@ -94,11 +96,16 @@ export function CrewOpsWorkspace({
       scroll.current?.scrollTo({ top: 0 });
       return;
     }
+    if (!id) {
+      onAgentQuestion(text.trim());
+      setQuery("");
+      scroll.current?.scrollTo({ top: 0 });
+      return;
+    }
     const message: AssistantMessage = {
       id: (messages.at(-1)?.id ?? 0) + 1,
       query: text.trim(),
-      scenario: id ? scenarios[id] : undefined,
-      generic: !id,
+      scenario: scenarios[id],
     };
     onMessages([...messages, message]);
     setActiveId(message.id);

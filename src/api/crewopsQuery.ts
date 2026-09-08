@@ -16,7 +16,7 @@ export interface CrewOpsQueryRequest {
 
 export interface CrewOpsQueryFailure {
   success: false;
-  error: { code: "INVALID_REQUEST" | "UNSUPPORTED_INTENT" | "ANALYSIS_FAILED"; message: string };
+  error: { code: "INVALID_REQUEST" | "CLARIFICATION_REQUIRED" | "UNSUPPORTED_INTENT" | "ANALYSIS_FAILED"; message: string };
 }
 
 export interface CrewOpsQuerySuccess {

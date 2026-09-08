@@ -40,7 +40,12 @@ export function ScenarioResult({
         </span>
         <Badge tone={scenario.live ? "success" : "muted"}>{scenario.live ? "LIVE DETERMINISTIC RESULT" : "MOCK RESULT"}</Badge>
       </div>
-      <p className="analysis-summary">{scenario.summary}</p>
+      <p className="analysis-summary">{scenario.naturalLanguageAnswer ?? scenario.summary}</p>
+      {scenario.agent && (
+        <Badge tone={scenario.agent.plannerFallback ? "muted" : "blue"}>
+          {scenario.agent.plannerFallback ? "DETERMINISTIC FALLBACK" : "AI PLANNED · DETERMINISTIC VALIDATION"}
+        </Badge>
+      )}
       <section className="panel impact-panel">
         <PanelTitle title="Operational Impact">
           <Badge tone={scenario.id === "multi" ? "success" : "warning"}>

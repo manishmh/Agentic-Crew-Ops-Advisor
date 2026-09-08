@@ -23,7 +23,7 @@ import type {
   Workspace,
 } from "../types/operations";
 import { operation, scenarios } from "../data/mocks";
-import { CrewOpsApiError, queryCertificationExpiry, queryDelay, queryMultiSick, querySickCrew, queryStationClosure } from "../api/crewops";
+import { CrewOpsApiError, queryAgent, queryCertificationExpiry, queryDelay, queryMultiSick, querySickCrew, queryStationClosure } from "../api/crewops";
 import { Dashboard } from "../components/dashboard/Dashboard";
 import { Timeline } from "../components/timeline/Timeline";
 import { DayBrief } from "../components/daybrief/DayBrief";
@@ -85,6 +85,9 @@ export function AppShell() {
   };
   const onMultiSickQuestion = async (question: string) => {
     await onLiveQuestion(question, queryMultiSick);
+  };
+  const onAgentQuestion = async (question: string) => {
+    await onLiveQuestion(question, queryAgent);
   };
   const onLiveQuestion = async (question: string, queryApi: (question: string) => Promise<Scenario>) => {
     const id = (messages.at(-1)?.id ?? 0) + 1;
@@ -323,6 +326,7 @@ export function AppShell() {
             onStationClosureQuestion={onStationClosureQuestion}
             onCertificationQuestion={onCertificationQuestion}
             onMultiSickQuestion={onMultiSickQuestion}
+            onAgentQuestion={onAgentQuestion}
             />
           )}
         </div>

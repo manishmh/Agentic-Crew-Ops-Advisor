@@ -8,7 +8,9 @@
     "api": "tsc --declaration false && node dist/src/api/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval:agent": "tsc --declaration false && node dist/evals/runAgentEval.js",
+    "eval:agent:live": "tsc --declaration false && node dist/evals/runAgentEval.js --live"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",

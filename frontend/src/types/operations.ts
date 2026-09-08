@@ -76,6 +76,8 @@ export interface Scenario {
   note?: string;
   /** True when this display scenario was returned by the local deterministic API. */
   live?: boolean;
+  naturalLanguageAnswer?: string;
+  agent?: { plannerUsed: boolean; plannerFallback: boolean; explainerUsed: boolean; fallbackUsed: boolean };
 }
 export interface AssistantMessage {
   id: number;
