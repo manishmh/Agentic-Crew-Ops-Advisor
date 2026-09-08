@@ -9,13 +9,13 @@ function agentDisplay(payload: UnknownRecord): Pick<Scenario, "naturalLanguageAn
   if (!isRecord(payload.agent)) throw new CrewOpsApiError("malformed", "Malformed CrewOps agent metadata.");
   const agent = payload.agent;
   for (const key of ["plannerUsed", "plannerFallback", "explainerUsed", "fallbackUsed"] as const) if (typeof agent[key] !== "boolean") throw new CrewOpsApiError("malformed", `Malformed CrewOps agent metadata: ${key}.`);
-  return { naturalLanguageAnswer: answer, agent: { plannerUsed: agent.plannerUsed as boolean, plannerFallback: agent.plannerFallback as boolean, explainerUsed: agent.explainerUsed as boolean, fallbackUsed: agent.fallbackUsed as boolean } };
+  return { naturalLanguageAnswer: answer, agent: { plannerMs: typeof agent.plannerMs === "number" ? agent.plannerMs : undefined, toolMs: typeof agent.toolMs === "number" ? agent.toolMs : undefined, explainerMs: typeof agent.explainerMs === "number" ? agent.explainerMs : undefined, plannerUsed: agent.plannerUsed as boolean, plannerFallback: agent.plannerFallback as boolean, explainerUsed: agent.explainerUsed as boolean, fallbackUsed: agent.fallbackUsed as boolean } };
 }
 
 export class CrewOpsApiError extends Error {
-  readonly kind: "network" | "backend" | "malformed" | "empty";
+  readonly kind: "network" | "backend" | "malformed" | "empty" | "clarification" | "unsupported";
   constructor(
-    kind: "network" | "backend" | "malformed" | "empty",
+    kind: "network" | "backend" | "malformed" | "empty" | "clarification" | "unsupported",
     message: string,
   ) {
     super(message);
@@ -434,16 +434,21 @@ async function queryLive(question: string, mapper: (payload: unknown, question: 
       signal,
     });
   } catch {
-    throw new CrewOpsApiError("network", "Unable to reach the CrewOps service. Check the local API connection and try again.");
+    throw new CrewOpsApiError("network", "The analysis service is temporarily unavailable. Please try again shortly.");
   }
+  if (response.status === 429) throw new CrewOpsApiError("backend", "Too many requests. Try again in a few minutes.");
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    throw new CrewOpsApiError("malformed", "CrewOps returned a non-JSON response.");
+    throw new CrewOpsApiError("malformed", "The analysis service returned an unexpected response. Please try again.");
   }
   if (!response.ok && (!isRecord(payload) || payload.success !== false)) {
     throw new CrewOpsApiError("network", `CrewOps service request failed (${response.status}).`);
+  }
+  if (!response.ok && isRecord(payload) && isRecord(payload.error)) {
+    if (payload.error.code === "CLARIFICATION_REQUIRED") throw new CrewOpsApiError("clarification", errorMessage(payload.error.message));
+    if (payload.error.code === "UNSUPPORTED_INTENT") throw new CrewOpsApiError("unsupported", "Choose a guided scenario for sick crew, flight delays, station closures, certification expiry or joint recovery.");
   }
   return mapper(payload, question);
 }

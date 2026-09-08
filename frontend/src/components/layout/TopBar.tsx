@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RefreshCw, Bell, X, ChevronRight, Monitor } from "lucide-react";
+import { Plane, Bell, X, ChevronRight, Monitor } from "lucide-react";
 import { reviewItems } from "../../data/mocks";
 import type { Workspace, ScenarioId } from "../../types/operations";
 import { Badge } from "../ui";
@@ -8,18 +8,15 @@ export function TopBar({
   compact,
   setCompact,
   setModal,
-  setToast,
   onScenario,
 }: {
   go: (workspace: Workspace) => void;
   compact: boolean;
   setCompact: (compact: boolean) => void;
   setModal: (modal: "settings" | "network" | "profile" | "help") => void;
-  setToast: (message: string) => void;
   onScenario: (id: ScenarioId) => void;
 }) {
   const [notifications, setNotifications] = useState(false);
-  const [refreshed, setRefreshed] = useState(false);
   return (
     <header className="global-header">
       <button
@@ -27,14 +24,9 @@ export function TopBar({
         onClick={() => go("Dashboard")}
         aria-label="home"
       >
-        <span className="brand-mark">
-          <span />
-          <span />
-          <span />
-        </span>
+        <Plane size={25} />
         <span>
-          <span className="brand-cortex">CrewOps advisor</span>
-          <sup>®</sup>
+          <span className="brand-cortex">CrewOps Recovery Copilot</span>
         </span>
       </button>
       <div className="product-divider" />
@@ -44,24 +36,8 @@ export function TopBar({
         <div className="data-health">
           <span className="live-dot" />
           <span>Operational data loaded</span>
-          <small>Mock snapshot</small>
+          <small>Synthetic snapshot</small>
         </div>
-        <span className="updated-label">
-          {refreshed ? "Demo reloaded" : "Updated just now"}
-        </span>
-        <button
-          className="icon-button"
-          title="Reload demo snapshot"
-          aria-label="Refresh demo snapshot"
-          onClick={() => {
-            setRefreshed(true);
-            setToast(
-              "Demo snapshot refreshed. No live operational data is connected.",
-            );
-          }}
-        >
-          <RefreshCw size={15} />
-        </button>
         <div className="notifications-wrap">
           <button
             className={`icon-button notification-button ${notifications ? "selected" : ""}`}
@@ -107,7 +83,7 @@ export function TopBar({
         </div>
         <label className="language-select">
           <span className="sr-only">Language</span>
-          <select aria-label="Language">
+          <select aria-label="Language" disabled title="English interface">
             <option>EN</option>
           </select>
         </label>

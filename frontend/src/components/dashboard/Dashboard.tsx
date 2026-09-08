@@ -254,7 +254,7 @@ export function Dashboard({
               </div>
               <div className="panel-footer">
                 <span>
-                  <ShieldCheck size={12} /> Availability verified in demo
+                  <ShieldCheck size={12} /> Availability verified in snapshot
                 </span>
                 <TextLink onClick={() => onScenario("multi")}>
                   Explore cover

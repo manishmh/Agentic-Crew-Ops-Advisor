@@ -20,7 +20,7 @@ export const briefPriorities = [
     id: "delay" as const,
     title: "DX412 +90 min",
     context: "BLR → HYD · FDP risk",
-    detail: "Duty exceeds FDP limit by 15 minutes in the demo",
+    detail: "Duty exceeds FDP limit by 15 minutes in the snapshot",
     status: "Recovery required",
     tone: "warning",
     action: "Inspect DX412 delay propagation",
@@ -402,7 +402,7 @@ export const scenarios: Record<ScenarioId, Scenario> = {
     query: "Close HYD from 05:00–09:00 UTC",
     label: "Station closure",
     summary:
-      "Closing HYD from 05:00–09:00 UTC affects four flights, three pairings and twelve crew. Two operations can wait for reopening; two require cancellation fallback in this demonstration.",
+      "Closing HYD from 05:00–09:00 UTC affects four flights, three pairings and twelve crew. Two operations can wait for reopening; two require cancellation fallback in this synthetic scenario.",
     status: "OPERATIONAL INTERVENTION",
     pairing: "3 affected pairings",
     metrics: [

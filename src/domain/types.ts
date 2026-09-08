@@ -1,5 +1,5 @@
 /**
- * Canonical domain model for the dCortex Agentic Crew Ops Advisor.
+ * Canonical domain model for the CrewOps Agentic Crew Ops Advisor.
  *
  * STEP 1 ONLY: pure types shaped exactly by the JSON structures in ./data/.
  * Source values are preserved verbatim — no normalization of suspicious

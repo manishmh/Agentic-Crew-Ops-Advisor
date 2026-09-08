@@ -77,7 +77,7 @@ export interface Scenario {
   /** True when this display scenario was returned by the local deterministic API. */
   live?: boolean;
   naturalLanguageAnswer?: string;
-  agent?: { plannerUsed: boolean; plannerFallback: boolean; explainerUsed: boolean; fallbackUsed: boolean };
+  agent?: { plannerMs?: number; toolMs?: number; explainerMs?: number; plannerUsed: boolean; plannerFallback: boolean; explainerUsed: boolean; fallbackUsed: boolean };
 }
 export interface AssistantMessage {
   id: number;
@@ -86,6 +86,7 @@ export interface AssistantMessage {
   generic?: boolean;
   state?: "loading" | "error" | "empty";
   error?: string;
+  errorTitle?: string;
 }
 export interface TimelineFlight extends AffectedFlight {
   date: string;

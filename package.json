@@ -2,7 +2,7 @@
   "name": "crew-ops-advisor",
   "version": "0.1.0",
   "private": true,
-  "description": "dCortex Agentic Crew Ops Advisor — Step 1: canonical domain model, loader, in-memory operational graph",
+  "description": "CrewOps Recovery Copilot — deterministic airline crew disruption analysis with an optional LLM planner",
   "type": "module",
   "scripts": {
     "api": "tsc --declaration false && node dist/src/api/server.js",

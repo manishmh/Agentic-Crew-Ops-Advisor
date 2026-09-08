@@ -13,6 +13,7 @@ import type {
 } from "../../types/operations";
 import { Badge, FlightChips, LegalityCheck, PanelTitle } from "../ui";
 import { RecoveryOption } from "./RecoveryOption";
+import { CompactMarkdown } from "./CompactMarkdown";
 
 export function ScenarioResult({
   scenario,
@@ -38,9 +39,11 @@ export function ScenarioResult({
           <Check size={11} />
           {scenario.id === "limits" ? "Evidence ready" : "Recovery assessed"}
         </span>
-        <Badge tone={scenario.live ? "success" : "muted"}>{scenario.live ? "LIVE DETERMINISTIC RESULT" : "MOCK RESULT"}</Badge>
+        <Badge tone="success">LIVE DETERMINISTIC RESULT</Badge>
       </div>
-      <p className="analysis-summary">{scenario.naturalLanguageAnswer ?? scenario.summary}</p>
+      {scenario.naturalLanguageAnswer && scenario.agent?.explainerUsed
+        ? <CompactMarkdown source={scenario.naturalLanguageAnswer} />
+        : <p className="analysis-summary">{scenario.naturalLanguageAnswer ?? scenario.summary}</p>}
       {scenario.agent && (
         <Badge tone={scenario.agent.plannerFallback ? "muted" : "blue"}>
           {scenario.agent.plannerFallback ? "DETERMINISTIC FALLBACK" : "AI PLANNED · DETERMINISTIC VALIDATION"}
@@ -75,8 +78,8 @@ export function ScenarioResult({
           <PanelTitle title={scenario.consequence.title}>
             <CircleAlert size={15} className="text-warning" />
           </PanelTitle>
-          {scenario.consequence.checks.map((check) => (
-            <LegalityCheck key={check.id} check={check} detailed />
+          {scenario.consequence.checks.map((check, checkIndex) => (
+            <LegalityCheck key={`${check.id}-${checkIndex}`} check={check} detailed />
           ))}
           <div className="boundary-note">
             <Layers3 size={14} />
@@ -205,9 +208,9 @@ export function ScenarioResult({
             </h2>
             <span className="muted">Ranked by deterministic cost</span>
           </div>
-          {scenario.alternatives.map((option) => (
+          {scenario.alternatives.map((option, optionIndex) => (
             <RecoveryOption
-              key={option.id}
+              key={`${option.id}-${optionIndex}`}
               option={option}
               onEvidence={(selected) => onEvidence(selected, scenario)}
             />

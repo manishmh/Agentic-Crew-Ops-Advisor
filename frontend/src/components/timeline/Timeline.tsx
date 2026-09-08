@@ -277,7 +277,7 @@ export function Timeline({
             </span>
           </div>
           <div className="panel-footer">
-            <span>{rows.length} flights displayed · curated demo rotation</span>
+            <span>{rows.length} flights displayed · selected operational rotation</span>
             <span>14 Sep · UTC</span>
           </div>
         </section>
@@ -318,7 +318,7 @@ export function Timeline({
                 onScenario("delay");
               }}
             >
-              Explore delay demo
+              Analyze delay propagation
               <ArrowRight size={14} />
             </button>
           </div>

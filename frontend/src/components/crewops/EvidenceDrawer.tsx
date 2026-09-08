@@ -23,16 +23,11 @@ export function EvidenceDrawer({
           <Fingerprint size={16} />
           <div>
             <strong>Traceable by design</strong>
-            <span>{scenario.live ? "Deterministic API evidence · read-only" : "Mock deterministic evidence · read-only"}</span>
+            <span>Deterministic API evidence · read-only</span>
           </div>
-          <Badge tone="legal">{scenario.live ? "VERIFIED" : "VERIFIED DEMO"}</Badge>
+          <Badge tone="legal">VERIFIED</Badge>
         </div>
-        {scenario.agent && (
-          <section>
-            <h3 className="eyebrow">AGENT TRACE</h3>
-            <p className="evidence-reason">Query interpretation → {scenario.id.toUpperCase()} · Analysis → deterministic CrewOps engine · Explanation → {scenario.agent.explainerUsed ? "AI grounded in deterministic evidence" : "deterministic summary"}</p>
-          </section>
-        )}
+
         <section>
           <h3 className="eyebrow">WHY THIS OPTION</h3>
           <p className="evidence-reason">{option.reason}</p>
@@ -42,8 +37,8 @@ export function EvidenceDrawer({
             <ShieldCheck size={13} /> RULE CHECKS
           </h3>
           <div className="evidence-rules">
-            {option.checks.map((check) => (
-              <LegalityCheck key={check.id} check={check} detailed />
+            {option.checks.map((check, checkIndex) => (
+              <LegalityCheck key={`${check.id}-${checkIndex}`} check={check} detailed />
             ))}
           </div>
         </section>
@@ -75,13 +70,20 @@ export function EvidenceDrawer({
             </div>
           </section>
         )}
+        {scenario.agent && (
+          <section className="agent-trace">
+            <h3 className="eyebrow">AGENT TRACE</h3>
+            <p className="evidence-reason">Planner / parser → {scenario.id.toUpperCase()} · Analysis → deterministic CrewOps engine · Explanation → {scenario.agent.explainerUsed ? "AI grounded in deterministic evidence" : "deterministic summary"}</p>
+          <p className="muted">Planner: {scenario.agent.plannerMs ?? "—"} ms · Engine: {scenario.agent.toolMs ?? "—"} ms · Explainer: {scenario.agent.explainerMs ?? "—"} ms</p>
+          </section>
+        )}
         <div className="evidence-footnote">
           <ShieldCheck size={16} />
           <p>
             Legality, timing and cost values are produced by the deterministic
             CrewOps rules engine.
             <br />
-            <strong>{scenario.live ? "This result was returned by the deterministic CrewOps API." : "This preview displays fixed mock values; no live analysis is connected."}</strong>
+            <strong>This result was returned by the deterministic CrewOps API.</strong>
           </p>
         </div>
       </div>

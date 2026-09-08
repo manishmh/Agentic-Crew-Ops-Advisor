@@ -10,7 +10,8 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:8787',
+      '/api': process.env.CREWOPS_API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
+      '/health': process.env.CREWOPS_API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
     },
   },
 })

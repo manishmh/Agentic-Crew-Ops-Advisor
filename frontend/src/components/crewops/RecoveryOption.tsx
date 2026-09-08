@@ -40,8 +40,8 @@ export function RecoveryOption({
         <div className="alternative-details">
           <div>
             <p>{option.reason}</p>
-            {option.checks.map((check) => (
-              <LegalityCheck check={check} detailed key={check.id} />
+            {option.checks.map((check, checkIndex) => (
+              <LegalityCheck check={check} detailed key={`${check.id}-${checkIndex}`} />
             ))}
             {option.comparison && (
               <div className="comparison">{option.comparison}</div>
@@ -102,8 +102,8 @@ export function RecoveryOption({
         </div>
       </div>
       <div className="recovery-checks">
-        {option.checks.map((check) => (
-          <LegalityCheck key={check.id} check={check} />
+        {option.checks.map((check, checkIndex) => (
+          <LegalityCheck key={`${check.id}-${checkIndex}`} check={check} />
         ))}
       </div>
       <div className="recovery-footer">
@@ -111,7 +111,7 @@ export function RecoveryOption({
           <ShieldCheck size={13} />
           {option.reason}
         </span>
-        <button className="button primary" onClick={() => onEvidence(option)}>
+        <button className="button primary" data-testid="decision-evidence-button" onClick={() => onEvidence(option)}>
           <FileCheck2 size={14} />
           View Decision Evidence
           <ArrowRight size={14} />

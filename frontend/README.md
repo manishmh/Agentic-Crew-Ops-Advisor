@@ -1,44 +1,16 @@
-# dCortex CrewOps Advisor
+# CrewOps Recovery Copilot frontend
 
-Interactive, mock-only OCC frontend built with the existing React, TypeScript, Vite and Oxlint stack. All files and dependencies are contained in `frontend/`.
+The React/Vite interface presents a synthetic airline operations workspace and sends every operational analysis to the same-origin `POST /api/crewops/query` endpoint. It contains no operational-result mock fallback and no provider credentials.
 
-## Run
+From the repository root, start the API with `npm run api`. In another terminal:
 
-```sh
-cd frontend
-npm install
-npm run dev
+```bash
+npm install --prefix frontend
+npm run dev --prefix frontend
 ```
 
-Open the local URL printed by Vite. `npm run build` runs TypeScript checking and creates `dist/`. `npm run lint` runs Oxlint. `npm run preview` serves the production build.
+Vite proxies `/api` and `/health` to `http://127.0.0.1:8080` by default. Override the development target with `CREWOPS_API_PROXY_TARGET` when needed.
 
-## Demo route
+Use `npm run build --prefix frontend` for the production bundle and `npm run lint --prefix frontend` for static checks. The application exposes five guided disruption analyses, typed command submission, in-memory session history, decision evidence, and an architecture view.
 
-1. Start on Dashboard: inspect the seven operational metrics, switch the FTL crew tabs, and review the exception queue.
-2. Open Timeline: filter by time block, base, direction or risk; switch between the time grid and table; inspect a flight.
-3. Open Day Brief: launch a recommended action directly into CrewOps AI.
-4. Open CrewOps AI and choose **What happens if C-1042 reports sick?**. Inspect the recommendation, expand alternatives, and open **View Decision Evidence**.
-5. Use the scenario list to demonstrate delay, closure, certification expiry and joint recovery. The empty-state prompts also expose the duty-limit lookup.
-
-Manual submission recognizes the prepared prompt text (case-insensitive, with either hyphens or en dashes). Other text receives an explicit demo explanation and a choice of supported scenarios; it is not presented as a calculated result. Enter submits; Shift+Enter inserts a newline. Ctrl/Cmd+K starts a new analysis while retaining session history. History is held in memory and resets on page reload.
-
-## Display architecture
-
-- `src/app/AppShell.tsx`: workspace, date, session, and overlay state.
-- `src/components/layout/`: global rail, header, and schematic network view.
-- `src/components/dashboard/`, `timeline/`, `daybrief/`: operational workspaces.
-- `src/components/crewops/`: command workspace, shared scenario rendering, recovery cards, and evidence drawer.
-- `src/components/ui.tsx`: status badges, panels, rule evidence, cost breakdowns and accessible native dialogs.
-- `src/data/mocks.ts`: prepared display scenarios, flight timelines, FTL rows, exception and brief data.
-- `src/types/operations.ts`: frontend display contracts, including explicit legal/rejected/warning/not-evaluated states.
-- `src/index.css`: dark semantic color tokens, component styles and responsive layouts.
-
-## Mock boundaries
-
-The operational snapshot is fixed to **14 September 2026**. Other date selections explicitly show that no snapshot is available. Scenario examples can reference future duties. Timeline rows are a curated demonstration subset, not all 147 flights. Schematic network positions and timeline bar positions are display fixtures.
-
-Legality, ranks, costs, comparisons and delays are supplied display values. The frontend does not calculate operational legality or recovery and does not import backend source, make API calls, or apply operational actions. Mock scenarios are illustrative and are not asserted to reproduce the root dataset's current answers.
-
-## Verification
-
-Build (including TypeScript) and Oxlint pass. Verified in local Chromium at 1440, 1280 and 1024 pixel widths: navigation, crew tabs, timeline filters and table toggle, all disruption scenarios, manual query submission, fallback response, history isolation, evidence open/close and scroll, date availability, display settings, notifications and network closure state. Native dialogs provide focus trapping and Escape dismissal; reduced-motion preferences are respected.
+The operational snapshot is synthetic and fixed to 14 September 2026. The project is independent, is not connected to an airline, and is not intended for operational aviation use.

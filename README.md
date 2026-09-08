@@ -1,9 +1,9 @@
 # Crew Ops Advisor — Synthetic Dataset
 
-Master dataset for the dCortex hackathon problem statement. Deterministic
+Master dataset for the CrewOps hackathon problem statement. Deterministic
 (seed 42), regenerable with `generate.py`, independently checked by `validate.py`.
 
-**Carrier:** dCortex Air (fictional) · **Hub:** BLR · **Week:** 2026-09-14 → 2026-09-20
+**Carrier:** CrewOps Air (fictional) · **Hub:** BLR · **Week:** 2026-09-14 → 2026-09-20
 **Snapshot ("now"):** `2026-09-14T18:00:00Z` · **All times UTC** · **Currency: INR**
 
 ## Contents

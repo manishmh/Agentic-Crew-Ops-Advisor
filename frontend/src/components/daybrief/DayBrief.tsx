@@ -39,7 +39,7 @@ export function DayBrief({
             handover · 05:42 UTC
           </p>
         </div>
-        <Badge tone="blue">DEMO OPERATIONAL BRIEF</Badge>
+        <Badge tone="blue">OPERATIONAL BRIEF</Badge>
       </div>
       <MetricsGrid onScenario={onScenario} />
       <div className="brief-columns">
@@ -128,7 +128,7 @@ export function DayBrief({
         </div>
       </section>
       <div className="brief-footnote">
-        Prepared from the fixed demo snapshot · {operationNote}
+        Prepared from the fixed synthetic snapshot · {operationNote}
       </div>
     </div>
   );
