@@ -36,7 +36,7 @@ export function serverConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig
     allowedOrigin, trustProxy: env.CREWOPS_TRUST_PROXY === "true",
   };
 }
-/** Railway and other Node hosts provide PORT; local development keeps CREWOPS_PORT. */
+/** Hosted Node platforms provide PORT; local development keeps CREWOPS_PORT. */
 export function listenConfig(env: NodeJS.ProcessEnv = process.env): ListenConfig {
   const usesPlatformPort = Boolean(env.PORT);
   return {

@@ -5,7 +5,7 @@ const isRecord = (value: unknown): value is UnknownRecord => typeof value === "o
 const frontendEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
 const apiBaseUrl = (frontendEnv?.VITE_CREWOPS_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
 
-/** Empty locally (Vite proxy); absolute on Vercel so requests reach Railway. */
+/** Empty for the local proxy and same-origin Vercel API; an external API URL is optional. */
 export function crewOpsApiUrl(path: string): string {
   return `${apiBaseUrl}${path}`;
 }

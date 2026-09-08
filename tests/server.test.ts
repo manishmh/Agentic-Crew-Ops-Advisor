@@ -15,7 +15,7 @@ const post = (url: string, body = JSON.stringify({ question: "C-1042 reports sic
 afterEach(async () => { await Promise.all(servers.splice(0).map(server => new Promise<void>(resolve => { server.closeAllConnections(); server.close(() => resolve()); }))); });
 
 describe("Public HTTP boundary", () => {
-  test("uses Railway's PORT and a public bind address without changing local defaults", () => {
+  test("uses a platform PORT and public bind address without changing local defaults", () => {
     expect(listenConfig({})).toEqual({ port: 8080, host: "127.0.0.1" });
     expect(listenConfig({ PORT: "5432" })).toEqual({ port: 5432, host: "0.0.0.0" });
     expect(listenConfig({ PORT: "5432", CREWOPS_PORT: "8080", CREWOPS_HOST: "127.0.0.1" })).toEqual({ port: 5432, host: "127.0.0.1" });
