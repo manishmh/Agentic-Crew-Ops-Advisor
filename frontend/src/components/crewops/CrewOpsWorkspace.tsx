@@ -58,18 +58,22 @@ export function CrewOpsWorkspace({ messages, activeId, setActiveId, onEvidence, 
             {liveScenarios.map(scenario => <button role="menuitem" key={scenario.id} onClick={() => executeScenario(scenario)} data-testid={`new-analysis-${scenario.id}`} disabled={submitting}><span className="scenario-number">{scenario.label}</span><small>{scenario.query}</small></button>)}
           </div>}
         </div>
-        <div className="sidebar-section-title"><History size={13} /> THIS SESSION <span>{messages.length.toString().padStart(2, "0")}</span></div>
-        <div className="analysis-history">
+        <div data-tour="session-history">
+          <div className="sidebar-section-title"><History size={13} /> THIS SESSION <span>{messages.length.toString().padStart(2, "0")}</span></div>
+          <div className="analysis-history">
           {messages.length === 0 ? <p className="muted sidebar-empty">Your analyses will appear here.</p> : [...messages].reverse().map(item => <button className={active?.id === item.id ? "active" : ""} key={item.id} onClick={() => { setActiveId(item.id); scroll.current?.scrollTo({ top: 0 }); }}><MessageSquare size={14} /><span>{item.query}</span><ChevronRight size={12} /></button>)}
+          </div>
         </div>
-        <div className="sidebar-section-title"><FileCheck2 size={13} /> TRY A LIVE SCENARIO</div>
-        <div className="scenario-nav">
-          {liveScenarios.map((scenario, index) => <button key={scenario.id} onClick={() => executeScenario(scenario)} disabled={submitting} data-testid={`sidebar-scenario-${scenario.id}`}><span className="scenario-number">0{index + 1}</span><span>{scenario.label}</span><ArrowUp size={12} /></button>)}
+        <div data-tour="live-scenarios">
+          <div className="sidebar-section-title"><FileCheck2 size={13} /> TRY A LIVE SCENARIO</div>
+          <div className="scenario-nav">
+            {liveScenarios.map((scenario, index) => <button key={scenario.id} onClick={() => executeScenario(scenario)} disabled={submitting} data-testid={`sidebar-scenario-${scenario.id}`}><span className="scenario-number">0{index + 1}</span><span>{scenario.label}</span><ArrowUp size={12} /></button>)}
+          </div>
         </div>
         <div className="sidebar-trust"><ShieldCheck size={20} /><strong>Every decision. Explained.</strong><p>Traceable legality, exact costs and transparent recovery options.</p><div><span className="live-dot" /> Synthetic operational data</div></div>
       </aside>
       <main className="copilot-main">
-        <nav className="quick-scenarios" aria-label="Quick live scenarios">{liveScenarios.map(scenario => <button key={scenario.id} onClick={() => executeScenario(scenario)} disabled={submitting}>{scenario.label}</button>)}</nav>
+        <nav className="quick-scenarios" data-tour="live-scenarios-mobile" aria-label="Quick live scenarios">{liveScenarios.map(scenario => <button key={scenario.id} onClick={() => executeScenario(scenario)} disabled={submitting}>{scenario.label}</button>)}</nav>
         <div className="mobile-analysis-action">
           <button className="button" onClick={() => setNewAnalysisOpen(open => !open)} aria-expanded={newAnalysisOpen}><Plus size={13} /> New analysis</button>
           {newAnalysisOpen && <div className="new-analysis-menu" role="menu"><button role="menuitem" onClick={blankAnalysis}><Plus size={13} /><span><strong>Blank analysis</strong><small>Start with an empty command</small></span></button>{liveScenarios.map(scenario => <button role="menuitem" key={scenario.id} onClick={() => executeScenario(scenario)} disabled={submitting}><span className="scenario-number">{scenario.label}</span><small>{scenario.query}</small></button>)}</div>}
@@ -90,7 +94,7 @@ export function CrewOpsWorkspace({ messages, activeId, setActiveId, onEvidence, 
             <button className="another-analysis" onClick={() => { input.current?.focus(); scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: "smooth" }); }}>Run another analysis <ArrowDown size={13} /></button>
           </div>}
         </div>
-        <div className="command-area">
+        <div className="command-area" data-tour="query-input">
           <form className="command-input" onSubmit={event => { event.preventDefault(); void executeQuery(query); }}><Command size={18} /><textarea ref={input} rows={1} maxLength={2000} aria-label="CrewOps command" placeholder="Ask about crew, flights, delays, closures…" value={query} disabled={submitting} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void executeQuery(query); } }} /><button className="send-button" type="submit" aria-label="Send query" disabled={submitting || !query.trim()}><ArrowUp size={18} /></button></form>
           <div className="command-help"><span><ShieldCheck size={11} /> Synthetic data · independent scenarios</span><span>Enter to send <span className="keycap">↵</span> <i /> Shift + Enter for a new line</span></div>
         </div>

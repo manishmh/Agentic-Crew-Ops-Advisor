@@ -122,7 +122,7 @@ export function RecoveryOption({
           <ShieldCheck size={13} />
           {option.reason}
         </span>
-        <button className="button primary" data-testid="decision-evidence-button" onClick={() => onEvidence(option)}>
+        <button className="button primary" data-testid="decision-evidence-button" data-tour="decision-evidence" onClick={() => onEvidence(option)}>
           <FileCheck2 size={14} />
           View Decision Evidence
           <ArrowRight size={14} />

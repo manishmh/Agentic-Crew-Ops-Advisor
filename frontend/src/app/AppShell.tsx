@@ -13,6 +13,9 @@ import { Timeline } from "../components/timeline/Timeline";
 import { Badge, Modal } from "../components/ui";
 import { operation } from "../data/mocks";
 import { liveScenarios, product } from "../data/project";
+import { CrewOpsWelcome } from "../onboarding/CrewOpsWelcome";
+import { startCrewOpsTour } from "../onboarding/crewOpsTour";
+import { markOnboardingSkipped, shouldShowOnboardingWelcome } from "../onboarding/onboardingStorage";
 import type { AssistantMessage, RecoveryOption, Scenario, ScenarioId, Workspace } from "../types/operations";
 
 const tabs: { name: Workspace; icon: typeof LayoutDashboard }[] = [
@@ -45,6 +48,7 @@ export function AppShell() {
   const [compact, setCompact] = useState(false);
   const [date, setDate] = useState(operation.date);
   const [toast, setToast] = useState("");
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
 
   const go = (next: Workspace) => {
     setWorkspace(next);
@@ -108,6 +112,22 @@ export function AppShell() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  useEffect(() => {
+    const workspaceStable = !overview && workspace === "CrewOps AI" && !submitting && !architecture && !evidence && !modal;
+    if (!workspaceStable || !shouldShowOnboardingWelcome()) return;
+    const timer = window.setTimeout(() => setWelcomeOpen(true), 0);
+    return () => window.clearTimeout(timer);
+  }, [architecture, evidence, modal, overview, submitting, workspace]);
+
+  const launchTour = () => {
+    if (submitting || architecture || evidence || modal) return;
+    setWelcomeOpen(false);
+    requestAnimationFrame(() => startCrewOpsTour());
+  };
+  const skipWelcome = () => {
+    markOnboardingSkipped();
+    setWelcomeOpen(false);
+  };
 
   if (overview) return <><ProjectOverview onOpen={startBlankAnalysis} onArchitecture={() => setArchitecture(true)} />{architecture && <Architecture onClose={() => setArchitecture(false)} />}</>;
 
@@ -120,7 +140,7 @@ export function AppShell() {
       }} setModal={setModal} />
       <div className="shell-content">
         <TopBar go={go} compact={compact} setCompact={setCompact} setModal={setModal} onScenario={runScenario} />
-        <div className="public-workspace-bar">
+        <div className="public-workspace-bar" data-tour="agent-principle">
           <button className="text-link" onClick={() => setOverview(true)}><ChevronLeft size={14} /> Project overview</button>
           <span>{product.principle}</span>
           <button className="text-link" onClick={() => setArchitecture(true)}>Architecture <GitBranch size={14} /></button>
@@ -130,12 +150,15 @@ export function AppShell() {
           <div className="workspace-context"><span className="live-dot" /> BLR OPERATIONS <span className="context-divider" /><Clock3 size={12} /> UTC</div>
         </div>
         {workspace === "CrewOps AI" ? (
-          <div className="date-toolbar crewops-workspace-bar">
+          <div className="date-toolbar crewops-workspace-bar" data-tour="workspace">
             <div className="crewops-workspace-title">
               <strong>Crew recovery desk</strong>
               <span><i className="live-dot" /> LIVE OPERATIONS WORKSPACE</span>
             </div>
-            <button className="text-link" onClick={() => setModal("network")}><GitBranch size={14} /> Network view <ArrowRight size={13} /></button>
+            <div className="crewops-workspace-actions">
+              <button className="text-link" disabled={submitting} onClick={launchTour}>How this works</button>
+              <button className="text-link" onClick={() => setModal("network")}><GitBranch size={14} /> Network view <ArrowRight size={13} /></button>
+            </div>
           </div>
         ) : (
           <div className="date-toolbar">
@@ -163,6 +186,7 @@ export function AppShell() {
         </div>
       </Modal>}
       {toast && <div className="toast" role="status"><ShieldCheck size={16} />{toast}<button className="icon-button" aria-label="Dismiss notification" onClick={() => setToast("")}><X size={13} /></button></div>}
+      <CrewOpsWelcome open={welcomeOpen} onTakeTour={launchTour} onExplore={skipWelcome} />
     </div>
   );
 }

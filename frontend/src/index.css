@@ -698,7 +698,12 @@ option {
   font-weight: 550;
   white-space: nowrap;
 }
-.crewops-workspace-bar > .text-link {
+.crewops-workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.crewops-workspace-actions .text-link {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2789,6 +2794,151 @@ dialog::backdrop {
   background: #030912b3;
   backdrop-filter: blur(2px);
 }
+.crewops-welcome {
+  width: min(470px, calc(100vw - 30px));
+  border-color: #30496e;
+  border-radius: 5px;
+}
+.crewops-welcome::backdrop {
+  background: #030912b8;
+  backdrop-filter: blur(1.5px);
+}
+.welcome-content {
+  background: #0c1627;
+}
+.welcome-content > header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 18px 19px;
+  border-bottom: 1px solid #22334d;
+  background: #101c2f;
+}
+.welcome-content > header > div:nth-child(2) {
+  min-width: 0;
+}
+.welcome-content > header > .icon-button {
+  margin-left: auto;
+}
+.welcome-content > header span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7893b8;
+  font-size: 8px;
+  letter-spacing: 1.1px;
+}
+.welcome-content h2 {
+  margin-top: 6px;
+  color: #e0e9f7;
+  font-size: 17px;
+  font-weight: 550;
+}
+.welcome-body {
+  padding: 19px;
+}
+.welcome-body > p {
+  color: #b4c3d7;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.welcome-principle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #28405e;
+  border-radius: 4px;
+  background: #101e32;
+  color: #6fcdb4;
+}
+.welcome-principle p {
+  color: #8fa4bf;
+  font-size: 10px;
+  line-height: 1.65;
+}
+.welcome-principle strong {
+  color: #c9d8ea;
+}
+.welcome-content > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 13px 19px;
+  border-top: 1px solid #22334d;
+  background: #0a1423;
+}
+
+/* Driver.js is themed as an operational CrewOps overlay. */
+.crewops-tour-popover.driver-popover {
+  width: min(360px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  padding: 15px;
+  color: #dce7f6;
+  border: 1px solid #355076;
+  border-radius: 5px;
+  background: #0f1b2e;
+  box-shadow: 0 18px 50px #020711cc;
+}
+.crewops-tour-popover .driver-popover-title {
+  color: #e5edf9;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.crewops-tour-popover .driver-popover-description {
+  margin-top: 7px;
+  color: #a5b5ca;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.crewops-tour-popover .driver-popover-footer {
+  margin-top: 15px;
+}
+.crewops-tour-popover .driver-popover-progress-text {
+  color: #6f85a4;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+.crewops-tour-popover .driver-popover-navigation-btns {
+  gap: 6px;
+}
+.crewops-tour-popover button {
+  min-height: 30px;
+  padding: 6px 10px;
+  color: #b6c7dc;
+  border: 1px solid #314664;
+  border-radius: 4px;
+  background: #14233a;
+  font-size: 10px;
+  text-shadow: none;
+}
+.crewops-tour-popover button:hover,
+.crewops-tour-popover button:focus-visible {
+  color: #fff;
+  border-color: #5574a2;
+  background: #1c3050;
+}
+.crewops-tour-popover .driver-popover-next-btn {
+  color: #fff;
+  border-color: #4066f4;
+  background: #4066f4;
+}
+.crewops-tour-popover .driver-popover-close-btn {
+  top: 10px;
+  right: 11px;
+  min-height: auto;
+  padding: 3px 5px;
+  color: #8297b5;
+  border: 0;
+  background: transparent;
+  font-size: 9px;
+}
+.crewops-tour-popover .driver-popover-arrow-side-left { border-left-color: #355076; }
+.crewops-tour-popover .driver-popover-arrow-side-right { border-right-color: #355076; }
+.crewops-tour-popover .driver-popover-arrow-side-top { border-top-color: #355076; }
+.crewops-tour-popover .driver-popover-arrow-side-bottom { border-bottom-color: #355076; }
 .drawer {
   height: 100dvh;
   max-height: 100dvh;
@@ -4240,7 +4390,7 @@ td {
   .crewops-workspace-title { gap: 8px; }
   .crewops-workspace-title > span { font-size: 6px; letter-spacing: 0.8px; }
   .crewops-workspace-title > strong { font-size: 13px; }
-  .crewops-workspace-bar > .text-link { font-size: 8px; }
+  .crewops-workspace-actions .text-link { font-size: 8px; }
   .brand-cortex { font-size: 13px; }
 }
 @media (max-width: 540px) {
@@ -4249,7 +4399,11 @@ td {
   .project-metrics { grid-template-columns: repeat(3, 1fr); }
   .architecture-flow .architecture-branches { grid-template-columns: 1fr; }
   .crewops-workspace-title > span { max-width: 88px; white-space: normal; line-height: 1.25; }
-  .crewops-workspace-bar > .text-link { font-size: 0; gap: 2px; }
+  .crewops-workspace-actions { gap: 8px; }
+  .crewops-workspace-actions .text-link:last-child { font-size: 0; gap: 2px; }
+  .crewops-workspace-actions .text-link:first-child { font-size: 8px; }
+  .welcome-content > footer { align-items: stretch; flex-direction: column-reverse; }
+  .welcome-content > footer .button { width: 100%; }
   .recovery-assignments > div { grid-template-columns: 1fr auto; }
   .recovery-assignments small { grid-column: 1 / -1; grid-row: 2; }
 }

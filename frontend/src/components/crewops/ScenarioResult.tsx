@@ -29,7 +29,7 @@ export function ScenarioResult({
   const conciseAlternatives = [...legalAlternatives, ...rejectedAlternatives];
   const displayedAlternatives = showAllAlternatives ? scenario.alternatives : conciseAlternatives;
   return (
-    <div className="scenario-result" data-testid={`scenario-result-${scenario.id}`}>
+    <div className="scenario-result" data-testid={`scenario-result-${scenario.id}`} data-tour="result">
       <div className="analysis-trail">
         <span>
           <Check size={11} />
@@ -244,6 +244,7 @@ export function ScenarioResult({
           type="button"
           className="text-link"
           data-testid="deterministic-evidence-button"
+          data-tour="decision-evidence"
           onClick={() => onEvidence({ id: scenario.id === "closure" ? "STATION_CLOSURE" : scenario.id === "certification" ? "CERT_EXPIRY" : "MULTI_SICK", name: `${scenario.label} assessment`, role: "Deterministic evidence", method: "Read-only analysis", status: "not-evaluated", cost: "—", delay: "—", positioning: "—", reason: "Deterministic timing, rule, recovery, and cost evidence.", checks: [], components: [] }, scenario)}
         >
           View deterministic evidence
